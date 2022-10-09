@@ -1,0 +1,43 @@
+{
+  "pluginAlias": "WinixPurifiers",
+  "pluginType": "accessory",
+  "singular": false,
+  "headerDisplay": "Homebridge plugin for controlling Winix Air Purifiers",
+  "footerDisplay": "Created by @regaw-leinad",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "title": "Purifier Name",
+        "type": "string",
+        "required": true,
+        "default": "My Winix Purifier"
+      },
+      "model": {
+        "title": "Model",
+        "description": "The model of the purifier",
+        "type": "string",
+        "default": "C545",
+        "required": false,
+        "oneOf": [
+          {
+            "title": "C545",
+            "enum": [
+              "C545"
+            ]
+          }
+        ]
+      },
+      "deviceId": {
+        "title": "Device ID",
+        "type": "string",
+        "required": true
+      },
+      "showAirQuality": {
+        "title": "Show Air Quality",
+        "type": "boolean",
+        "default": true
+      }
+    }
+  }
+}
