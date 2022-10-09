@@ -1,4 +1,4 @@
-import { Airflow, AirQuality, DeviceStatus, Mode, Power } from './types';
+import { Airflow, AirQuality, DeviceStatus, Mode, Plasmawave, Power } from './types';
 import axios, { AxiosResponse } from 'axios';
 
 interface StatusResponse {
@@ -32,9 +32,9 @@ interface StatusAttributes {
   S07: string;
 }
 
-enum Attribute { Power = 'A02', Mode = 'A03', Airflow = 'A04', AirQuality = 'S07' }
+enum Attribute { Power = 'A02', Mode = 'A03', Airflow = 'A04', Plasmawave = 'A07', AirQuality = 'S07' }
 
-type AttributeValue = Power | Mode | Airflow | AirQuality;
+type AttributeValue = Power | Mode | Airflow | AirQuality | Plasmawave;
 
 export class WinixAPI {
 
@@ -64,6 +64,14 @@ export class WinixAPI {
 
   async getAirQuality(deviceId: string): Promise<AirQuality> {
     return await this.getDeviceAttribute(deviceId, Attribute.AirQuality) as AirQuality;
+  }
+
+  async getPlasmawave(deviceId: string): Promise<Plasmawave> {
+    return await this.getDeviceAttribute(deviceId, Attribute.Plasmawave) as Plasmawave;
+  }
+
+  async setPlasmawave(deviceId: string, value: Plasmawave): Promise<Plasmawave> {
+    return await this.setDeviceAttribute(deviceId, Attribute.Plasmawave, value) as Plasmawave;
   }
 
   async getDeviceStatus(deviceId: string): Promise<DeviceStatus> {
@@ -102,6 +110,7 @@ export class WinixAPI {
       mode: attributes[Attribute.Mode] as Mode,
       airflow: attributes[Attribute.Airflow] as Airflow,
       airQuality: attributes[Attribute.AirQuality] as AirQuality,
+      plasmawave: attributes[Attribute.Plasmawave] as Plasmawave,
     };
   }
 }

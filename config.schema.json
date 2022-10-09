@@ -15,10 +15,10 @@
       },
       "model": {
         "title": "Model",
-        "description": "The model of the purifier",
+        "description": "The model of the Winix purifier",
         "type": "string",
         "default": "C545",
-        "required": false,
+        "required": true,
         "oneOf": [
           {
             "title": "C545",
@@ -33,10 +33,17 @@
         "type": "string",
         "required": true
       },
-      "showAirQuality": {
-        "title": "Show Air Quality",
+      "exposeAirQuality": {
+        "title": "Air Quality Sensor",
+        "description": "Whether or not to expose the air quality sensor to HomeKit",
         "type": "boolean",
         "default": true
+      },
+      "exposePlasmawave": {
+        "title": "Plasmawave Switch",
+        "description": "Whether or not to expose a switch for Plasmawave on/off",
+        "type": "boolean",
+        "default": false
       }
     }
   }
