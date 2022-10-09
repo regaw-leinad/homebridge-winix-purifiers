@@ -145,11 +145,11 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
   private sendHomekitUpdate(): void {
     this.log.debug('sendHomekitUpdate()');
 
-    // TODO: Diff first, then send
     this.purifier.updateCharacteristic(this.hap.Characteristic.Active, this.toActiveState(this.deviceStatus.power));
     this.purifier.updateCharacteristic(this.hap.Characteristic.CurrentAirPurifierState, this.toCurrentState(this.deviceStatus.power));
     this.purifier.updateCharacteristic(this.hap.Characteristic.TargetAirPurifierState, this.toTargetState(this.deviceStatus.mode));
     this.purifier.updateCharacteristic(this.hap.Characteristic.RotationSpeed, this.toRotationSpeed(this.deviceStatus.airflow));
+    this.purifier.updateCharacteristic(this.hap.Characteristic.AirQuality, this.toAirQuality(this.deviceStatus.airQuality));
   }
 
   private toActiveState(power: Power): CharacteristicValue {
