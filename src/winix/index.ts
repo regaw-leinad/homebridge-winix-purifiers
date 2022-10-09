@@ -1,4 +1,4 @@
-import { Power, Mode, Airflow, AirQuality } from './types';
+import { Airflow, AirQuality, DeviceStatus, Mode, Power } from './types';
 import { WinixAPI } from './api';
 
 export {
@@ -7,4 +7,5 @@ export {
   Mode,
   Airflow,
   AirQuality,
+  DeviceStatus,
 };

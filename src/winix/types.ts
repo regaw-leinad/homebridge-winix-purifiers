@@ -21,3 +21,10 @@ export enum AirQuality {
   Fair = '02',
   Poor = '03'
 }
+
+export interface DeviceStatus {
+  power: Power;
+  mode: Mode;
+  airflow: Airflow;
+  airQuality: AirQuality;
+}

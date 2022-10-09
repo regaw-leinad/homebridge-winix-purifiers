@@ -1,4 +1,4 @@
-import { Airflow, AirQuality, Mode, Power } from './types';
+import { Airflow, AirQuality, DeviceStatus, Mode, Power } from './types';
 import axios, { AxiosResponse } from 'axios';
 
 interface StatusResponse {
@@ -66,14 +66,19 @@ export class WinixAPI {
     return await this.getDeviceAttribute(deviceId, Attribute.AirQuality) as AirQuality;
   }
 
-  private async getDeviceStatus(deviceId: string): Promise<StatusAttributes> {
+  async getDeviceStatus(deviceId: string): Promise<DeviceStatus> {
+    const attributes: StatusAttributes = await this.getDeviceStatusInternal(deviceId);
+    return this.toDevice(attributes);
+  }
+
+  private async getDeviceStatusInternal(deviceId: string): Promise<StatusAttributes> {
     const url: string = this.getDeviceStatusUrl(deviceId);
     const result: AxiosResponse<StatusResponse> = await axios.get<StatusResponse>(url);
     return result.data.body.data[0].attributes;
   }
 
   private async getDeviceAttribute(deviceId: string, attribute: Attribute): Promise<AttributeValue> {
-    const attributes: StatusAttributes = await this.getDeviceStatus(deviceId);
+    const attributes: StatusAttributes = await this.getDeviceStatusInternal(deviceId);
     return attributes[attribute.toString()];
   }
 
@@ -89,5 +94,14 @@ export class WinixAPI {
 
   private getSetAttributeUrl(deviceId: string, attribute: Attribute, value: AttributeValue): string {
     return `https://us.api.winix-iot.com/common/control/devices/${deviceId}/A211/${attribute}:${value}`;
+  }
+
+  private toDevice(attributes: StatusAttributes): DeviceStatus {
+    return {
+      power: attributes[Attribute.Power] as Power,
+      mode: attributes[Attribute.Mode] as Mode,
+      airflow: attributes[Attribute.Airflow] as Airflow,
+      airQuality: attributes[Attribute.AirQuality] as AirQuality,
+    };
   }
 }
