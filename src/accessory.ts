@@ -107,6 +107,13 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
     const mode: Mode = state === this.hap.Characteristic.TargetAirPurifierState.AUTO ? Mode.Auto : Mode.Manual;
     this.log.debug(`setTargetState(${state})`, mode);
 
+    // Don't try to set the mode if we're already in this mode
+    // Fixes issues with this being set right around the time of power on
+    if (this.latestStatus.mode === mode) {
+      this.log.debug('ignoring mode set: latestStatus.mode === mode');
+      return;
+    }
+
     await winix.setMode(this.deviceId, mode);
     this.latestStatus.mode = mode;
     this.sendHomekitUpdate();
