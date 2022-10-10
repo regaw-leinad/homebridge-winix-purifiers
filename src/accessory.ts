@@ -115,7 +115,9 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
       return;
     }
 
-    this.log.debug('scheduling update to rotation speed');
+    // If we're switching back to auto, the airflow speed will most likely change on the Winix device itself.
+    // Pause, get the latest airflow speed, then send the update to Homekit
+    this.log.debug('scheduling homekit update to rotation speed');
 
     setTimeout(async () => {
       await this.getRotationSpeed();
