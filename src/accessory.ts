@@ -3,14 +3,6 @@ import { Airflow, AirQuality, DeviceStatus, Mode, Plasmawave, Power, WinixAPI } 
 
 const winix = new WinixAPI();
 
-const FanSpeedToAirflow = {
-  0: Airflow.Sleep,
-  25: Airflow.Low,
-  50: Airflow.Medium,
-  75: Airflow.High,
-  100: Airflow.Turbo,
-};
-
 export class WinixPurifierAccessory implements AccessoryPlugin {
 
   private readonly hap: HAP;
