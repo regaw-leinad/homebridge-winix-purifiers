@@ -3,6 +3,14 @@ import { Airflow, AirQuality, DeviceStatus, Mode, Plasmawave, Power, WinixAPI } 
 
 const winix = new WinixAPI();
 
+const FanSpeedToAirflow = {
+  0: Airflow.Sleep,
+  25: Airflow.Low,
+  50: Airflow.Medium,
+  75: Airflow.High,
+  100: Airflow.Turbo,
+};
+
 export class WinixPurifierAccessory implements AccessoryPlugin {
 
   private readonly hap: HAP;
@@ -80,6 +88,11 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
     const power: Power = state === this.hap.Characteristic.Active.ACTIVE ? Power.On : Power.Off;
     this.log.debug(`setActiveState(${state})`, power);
 
+    if (this.latestStatus.power === power) {
+      this.log.debug('ignoring active state set: latestStatus.power === power');
+      return;
+    }
+
     await winix.setPower(this.deviceId, power);
     this.latestStatus.power = power;
     this.sendHomekitUpdate();
@@ -110,7 +123,7 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
     // Don't try to set the mode if we're already in this mode
     // Fixes issues with this being set right around the time of power on
     if (this.latestStatus.mode === mode) {
-      this.log.debug('ignoring mode set: latestStatus.mode === mode');
+      this.log.debug('ignoring target state set: latestStatus.mode === mode');
       return;
     }
 
@@ -229,17 +242,23 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
   }
 
   private toAirflow(state: CharacteristicValue): Airflow {
-    if (state > 75) {
-      return Airflow.Turbo;
-    } else if (state > 50) {
-      return Airflow.High;
-    } else if (state > 25) {
-      return Airflow.Medium;
-    } else if (state > 0) {
-      return Airflow.Low;
+    // Round to nearest 25
+    const nearestState: number = Math.round(state as number / 25) * 25;
+
+    switch (nearestState) {
+      case 0:
+        return Airflow.Sleep;
+      case 25:
+        return Airflow.Low;
+      case 50:
+        return Airflow.Medium;
+      case 75:
+        return Airflow.High;
+      case 100:
+        return Airflow.Turbo;
     }
 
-    return Airflow.Sleep;
+    return nearestState > 100 ? Airflow.Turbo : Airflow.Sleep;
   }
 
   private toAirQuality(airQuality: AirQuality): CharacteristicValue {
