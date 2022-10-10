@@ -1,8 +1,8 @@
 {
-  "pluginAlias": "WinixPurifiers",
+  "pluginAlias": "WinixPurifier",
   "pluginType": "accessory",
   "singular": false,
-  "headerDisplay": "Homebridge plugin for controlling Winix Air Purifiers",
+  "headerDisplay": "Homebridge plugin for controlling Winix air purifiers",
   "footerDisplay": "Created by @regaw-leinad",
   "schema": {
     "type": "object",
