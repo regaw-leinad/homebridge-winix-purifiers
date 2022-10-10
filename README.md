@@ -15,7 +15,7 @@ The following features are optionally supported
 * Show air quality
 * Expose switch to turn Plasmawave `on` / `off`
 
-### Device Support
+## Device Support
 
 Currently, this plugin supports the following Winix air purifiers
 
@@ -66,9 +66,10 @@ In your `config.json`, add and update the following under the `accessories` sect
 
 In order to communicate with the Winix device APIs and control your air purifiers, you need your device ids.
 
-### hfern/winix
+### [hfern/winix](https://github.com/hfern/winix)
 
-@hfern has reverse-engineered the Winix android app and created a Python CLI. This CLI allows a user to, among other
+[@hfern](https://github.com/hfern) has reverse-engineered the Winix android app and created a Python CLI. This CLI
+allows a user to, among other
 things,
 login and get the device ids associated with their account. I have used this to successfully get my device ids. Follow
 the setup and auth steps in the [README](https://github.com/hfern/winix/blob/master/README.md). You'll then find your
