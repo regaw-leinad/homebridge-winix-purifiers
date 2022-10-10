@@ -81,7 +81,7 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
     this.log.debug(`setActiveState(${state})`, power);
 
     if (this.latestStatus.power === power) {
-      this.log.debug('ignoring active state set: latestStatus.power === power');
+      this.log.debug('ignoring duplicate state set: active');
       return;
     }
 
@@ -115,7 +115,7 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
     // Don't try to set the mode if we're already in this mode
     // Fixes issues with this being set right around the time of power on
     if (this.latestStatus.mode === mode) {
-      this.log.debug('ignoring target state set: latestStatus.mode === mode');
+      this.log.debug('ignoring duplicate state set: target');
       return;
     }
 
@@ -141,13 +141,13 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
     const airflow: Airflow = await winix.getAirflow(this.deviceId);
     this.latestStatus.airflow = airflow;
 
-    this.log.debug('getRotationSpeed()', airflow);
+    this.log.debug('getRotationSpeed():', airflow);
     return this.toRotationSpeed(airflow);
   }
 
   async setRotationSpeed(state: CharacteristicValue) {
     const airflow: Airflow = this.toAirflow(state);
-    this.log.debug(`setRotationSpeed(${state})`, airflow);
+    this.log.debug(`setRotationSpeed(${state}):`, airflow);
 
     await winix.setAirflow(this.deviceId, airflow);
     this.latestStatus.airflow = airflow;
@@ -159,7 +159,7 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
     const airQuality: AirQuality = await winix.getAirQuality(this.deviceId);
     this.latestStatus.airQuality = airQuality;
 
-    this.log.debug('getAirQuality()', airQuality);
+    this.log.debug('getAirQuality():', airQuality);
     return this.toAirQuality(airQuality);
   }
 
@@ -167,13 +167,13 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
     const plasmawave: Plasmawave = await winix.getPlasmawave(this.deviceId);
     this.latestStatus.plasmawave = plasmawave;
 
-    this.log.debug('getPlasmawave()', plasmawave);
+    this.log.debug('getPlasmawave():', plasmawave);
     return this.toSwitch(plasmawave);
   }
 
   async setPlasmawave(state: CharacteristicValue) {
     const plasmawave: Plasmawave = this.toPlasmawave(state);
-    this.log.debug(`setPlasmawave(${state})`, plasmawave);
+    this.log.debug(`setPlasmawave(${state}):`, plasmawave);
 
     await winix.setPlasmawave(this.deviceId, plasmawave);
     this.latestStatus.plasmawave = plasmawave;
@@ -236,6 +236,7 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
   private toAirflow(state: CharacteristicValue): Airflow {
     // Round to nearest 25
     const nearestState: number = Math.round(state as number / 25) * 25;
+    this.log.debug(`toAirflow(${state}): ${nearestState}`);
 
     switch (nearestState) {
       case 0:
