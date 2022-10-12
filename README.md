@@ -1,6 +1,10 @@
 # homebridge-winix-purifiers
 
-[Homebridge](https://homebridge.io) plugin providing [Winix](https://www.winixamerica.com) air purifier support
+[Homebridge](https://homebridge.io) plugin providing support for [Winix](https://www.winixamerica.com) air purifiers.
+
+After buying some C545 purifiers, and seeing no support from the only other Winix plugin since September 2020, I decided
+to dive in and create an updated homebridge plugin to support them. Right now it only officially supports the C545,
+since that's all I own, but we can expand this to other Winix purifiers with support from other device owners!
 
 ## Features
 
@@ -66,11 +70,14 @@ In your `config.json`, add and update the following under the `accessories` sect
 
 In order to communicate with the Winix device APIs and control your air purifiers, you need your device ids.
 
+Follow [these steps](https://www.winixamerica.com/2021/11/04/winix-smart-app/) to connect your purifiers with the Winix
+app. These steps are necessary to connect your purifier to Winix and allow it to be controlled with this homebridge
+plugin.
+
 ### [hfern/winix](https://github.com/hfern/winix)
 
-[@hfern](https://github.com/hfern) has reverse-engineered the Winix android app and created a Python CLI. This CLI
-allows a user to, among other
-things,
-login and get the device ids associated with their account. I have used this to successfully get my device ids. Follow
-the setup and auth steps in the [README](https://github.com/hfern/winix/blob/master/README.md). You'll then find your
-device ids in the file `~/.config/winix/config.json`
+[@hfern](https://github.com/hfern) has reverse-engineered the Winix android app and created
+a [Python CLI](https://github.com/hfern/winix). This CLI allows you to, among other things, login and get the device
+ids associated with your account. I have used this to successfully get my device ids. Follow the setup and auth steps
+in the [README](https://github.com/hfern/winix/blob/master/README.md). You should then be able to find your device ids
+in the file `~/.config/winix/config.json`
