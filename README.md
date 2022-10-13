@@ -8,13 +8,18 @@ since that's all I own, but we can expand this to other Winix purifiers with sup
 
 ## Features
 
-The following features are supported on the air purifiers
+The following features are supported on the air purifiers:
 
 * Switch `on` / `off`
 * Switch between `auto` / `manual` modes
-* Adjust airflow speed (`Sleep`, `Low`, `Medium`, `High`, `Turbo`)
+* Adjust airflow speed
+    * `Sleep` mapped to `0%`
+    * `Low` mapped to `25%`
+    * `Medium` mapped to `50%`
+    * `High` mapped to `75%`
+    * `Turbo` mapped to `100%`
 
-The following features are optionally supported
+The following features are optionally supported:
 
 * Show air quality
 * Expose switch to turn Plasmawave `on` / `off`
