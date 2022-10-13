@@ -2,20 +2,21 @@
   "pluginAlias": "WinixPurifier",
   "pluginType": "accessory",
   "singular": false,
-  "headerDisplay": "Homebridge plugin for controlling Winix air purifiers",
-  "footerDisplay": "Created by @regaw-leinad",
+  "headerDisplay": "Configure one or more Winix air purifiers below",
+  "footerDisplay": "For help finding your device id, see [here](https://github.com/regaw-leinad/homebridge-winix-purifiers#device-ids)",
   "schema": {
     "type": "object",
     "properties": {
       "name": {
         "title": "Purifier Name",
+        "description": "The name of this Winix air purifier you want to expose to Homekit",
         "type": "string",
         "required": true,
         "default": "My Winix Purifier"
       },
       "model": {
         "title": "Model",
-        "description": "The model of the Winix purifier",
+        "description": "The model of your Winix air purifier",
         "type": "string",
         "default": "C545",
         "required": true,
@@ -30,6 +31,7 @@
       },
       "deviceId": {
         "title": "Device ID",
+        "description": "The device id of your Winix air purifier",
         "type": "string",
         "required": true
       },
@@ -37,7 +39,7 @@
         "title": "Air Quality Sensor",
         "description": "Whether or not to expose the air quality sensor to HomeKit",
         "type": "boolean",
-        "default": true
+        "default": false
       },
       "exposePlasmawave": {
         "title": "Plasmawave Switch",
