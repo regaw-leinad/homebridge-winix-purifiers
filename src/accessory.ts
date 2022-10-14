@@ -1,7 +1,5 @@
 import { AccessoryConfig, AccessoryPlugin, API, CharacteristicValue, HAP, Logging, Service } from 'homebridge';
-import { Airflow, AirQuality, DeviceStatus, Mode, Plasmawave, Power, WinixAPI } from './winix';
-
-const winix = new WinixAPI();
+import { Airflow, AirQuality, DeviceStatus, Mode, Plasmawave, Power, WinixAPI } from 'winix-api';
 
 export class WinixPurifierAccessory implements AccessoryPlugin {
 
@@ -69,7 +67,7 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
   }
 
   async getActiveState(): Promise<CharacteristicValue> {
-    const power: Power = await winix.getPower(this.deviceId);
+    const power: Power = await WinixAPI.getPower(this.deviceId);
     this.latestStatus.power = power;
 
     this.log.debug('getActiveState()', power);
@@ -85,13 +83,13 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
       return;
     }
 
-    await winix.setPower(this.deviceId, power);
+    await WinixAPI.setPower(this.deviceId, power);
     this.latestStatus.power = power;
     this.sendHomekitUpdate();
   }
 
   async getCurrentState(): Promise<CharacteristicValue> {
-    const power: Power = await winix.getPower(this.deviceId);
+    const power: Power = await WinixAPI.getPower(this.deviceId);
     this.latestStatus.power = power;
 
     this.log.debug('getCurrentState()', power);
@@ -100,7 +98,7 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
   }
 
   async getTargetState(): Promise<CharacteristicValue> {
-    const mode: Mode = await winix.getMode(this.deviceId);
+    const mode: Mode = await WinixAPI.getMode(this.deviceId);
     this.latestStatus.mode = mode;
 
     this.log.debug('getTargetState()', mode);
@@ -119,7 +117,7 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
       return;
     }
 
-    await winix.setMode(this.deviceId, mode);
+    await WinixAPI.setMode(this.deviceId, mode);
     this.latestStatus.mode = mode;
     this.sendHomekitUpdate();
 
@@ -138,7 +136,7 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
   }
 
   async getRotationSpeed(): Promise<CharacteristicValue> {
-    const airflow: Airflow = await winix.getAirflow(this.deviceId);
+    const airflow: Airflow = await WinixAPI.getAirflow(this.deviceId);
     this.latestStatus.airflow = airflow;
 
     this.log.debug('getRotationSpeed():', airflow);
@@ -149,14 +147,14 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
     const airflow: Airflow = this.toAirflow(state);
     this.log.debug(`setRotationSpeed(${state}):`, airflow);
 
-    await winix.setAirflow(this.deviceId, airflow);
+    await WinixAPI.setAirflow(this.deviceId, airflow);
     this.latestStatus.airflow = airflow;
     this.latestStatus.mode = Mode.Manual;
     this.sendHomekitUpdate();
   }
 
   async getAirQuality(): Promise<CharacteristicValue> {
-    const airQuality: AirQuality = await winix.getAirQuality(this.deviceId);
+    const airQuality: AirQuality = await WinixAPI.getAirQuality(this.deviceId);
     this.latestStatus.airQuality = airQuality;
 
     this.log.debug('getAirQuality():', airQuality);
@@ -164,7 +162,7 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
   }
 
   async getPlasmawave(): Promise<CharacteristicValue> {
-    const plasmawave: Plasmawave = await winix.getPlasmawave(this.deviceId);
+    const plasmawave: Plasmawave = await WinixAPI.getPlasmawave(this.deviceId);
     this.latestStatus.plasmawave = plasmawave;
 
     this.log.debug('getPlasmawave():', plasmawave);
@@ -175,7 +173,7 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
     const plasmawave: Plasmawave = this.toPlasmawave(state);
     this.log.debug(`setPlasmawave(${state}):`, plasmawave);
 
-    await winix.setPlasmawave(this.deviceId, plasmawave);
+    await WinixAPI.setPlasmawave(this.deviceId, plasmawave);
     this.latestStatus.plasmawave = plasmawave;
     this.sendHomekitUpdate();
   }
