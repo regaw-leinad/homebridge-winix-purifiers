@@ -1,10 +1,15 @@
 # homebridge-winix-purifiers
 
+![GitHub Workflow Status](https://img.shields.io/github/workflow/status/regaw-leinad/homebridge-winix-purifiers/Build%20and%20Lint)
+![npm](https://img.shields.io/npm/dm/homebridge-winix-purifiers)
+
 [Homebridge](https://homebridge.io) plugin providing support for [Winix](https://www.winixamerica.com) air purifiers.
 
-After buying some C545 purifiers, and seeing no support from the only other Winix plugin since September 2020, I decided
-to dive in and create an updated homebridge plugin to support them. Right now it only officially supports the C545,
-since that's all I own, but we can expand this to other Winix purifiers with support from other device owners!
+I bought some Winix C545 purifiers and wanted to control them from the Home app (like everything else haha). I found
+another Homebridge plugin, but it did not work out of the box (11 open issues at the time). Since that plugin's last
+update was in September 2020 (over 2 years ago at the time of writing), I decided to dive in and create my own plugin to
+support it. Right now it only officially supports the C545, since that's all I own, but we can expand this to other
+Winix purifiers with support from other device owners!
 
 ## Features
 
