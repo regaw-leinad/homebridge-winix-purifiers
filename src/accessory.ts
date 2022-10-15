@@ -1,4 +1,4 @@
-import { AccessoryConfig, AccessoryPlugin, API, CharacteristicValue, HAP, Logging, Service } from 'homebridge';
+import { AccessoryConfig, AccessoryPlugin, API, CharacteristicValue, HAP, HAPStatus, Logging, Nullable, Service } from 'homebridge';
 import { Airflow, AirQuality, DeviceStatus, Mode, Plasmawave, Power, WinixAPI } from 'winix-api';
 
 export class WinixPurifierAccessory implements AccessoryPlugin {
@@ -66,8 +66,17 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
       .onSet(this.setPlasmawave.bind(this));
   }
 
-  async getActiveState(): Promise<CharacteristicValue> {
-    const power: Power = await WinixAPI.getPower(this.deviceId);
+  async getActiveState(): Promise<Nullable<CharacteristicValue>> {
+    let power: Power;
+
+    try {
+      power = await WinixAPI.getPower(this.deviceId);
+    } catch (e) {
+      assertError(e);
+      this.log.error('error getting active state: ' + e.message);
+      throw new this.hap.HapStatusError(HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+    }
+
     this.latestStatus.power = power;
 
     this.log.debug('getActiveState()', power);
@@ -83,13 +92,29 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
       return;
     }
 
-    await WinixAPI.setPower(this.deviceId, power);
+    try {
+      await WinixAPI.setPower(this.deviceId, power);
+    } catch (e) {
+      assertError(e);
+      this.log.error('error setting active state: ' + e.message);
+      throw new this.hap.HapStatusError(HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+    }
+
     this.latestStatus.power = power;
     this.sendHomekitUpdate();
   }
 
   async getCurrentState(): Promise<CharacteristicValue> {
-    const power: Power = await WinixAPI.getPower(this.deviceId);
+    let power: Power;
+
+    try {
+      power = await WinixAPI.getPower(this.deviceId);
+    } catch (e) {
+      assertError(e);
+      this.log.error('error getting current state: ' + e.message);
+      throw new this.hap.HapStatusError(HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+    }
+
     this.latestStatus.power = power;
 
     this.log.debug('getCurrentState()', power);
@@ -98,7 +123,16 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
   }
 
   async getTargetState(): Promise<CharacteristicValue> {
-    const mode: Mode = await WinixAPI.getMode(this.deviceId);
+    let mode: Mode;
+
+    try {
+      mode = await WinixAPI.getMode(this.deviceId);
+    } catch (e) {
+      assertError(e);
+      this.log.error('error getting target state: ' + e.message);
+      throw new this.hap.HapStatusError(HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+    }
+
     this.latestStatus.mode = mode;
 
     this.log.debug('getTargetState()', mode);
@@ -117,7 +151,14 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
       return;
     }
 
-    await WinixAPI.setMode(this.deviceId, mode);
+    try {
+      await WinixAPI.setMode(this.deviceId, mode);
+    } catch (e) {
+      assertError(e);
+      this.log.error('error setting target state: ' + e.message);
+      throw new this.hap.HapStatusError(HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+    }
+
     this.latestStatus.mode = mode;
     this.sendHomekitUpdate();
 
@@ -136,7 +177,16 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
   }
 
   async getRotationSpeed(): Promise<CharacteristicValue> {
-    const airflow: Airflow = await WinixAPI.getAirflow(this.deviceId);
+    let airflow: Airflow;
+
+    try {
+      airflow = await WinixAPI.getAirflow(this.deviceId);
+    } catch (e) {
+      assertError(e);
+      this.log.error('error getting rotation speed: ' + e.message);
+      throw new this.hap.HapStatusError(HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+    }
+
     this.latestStatus.airflow = airflow;
 
     this.log.debug('getRotationSpeed():', airflow);
@@ -147,14 +197,30 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
     const airflow: Airflow = this.toAirflow(state);
     this.log.debug(`setRotationSpeed(${state}):`, airflow);
 
-    await WinixAPI.setAirflow(this.deviceId, airflow);
+    try {
+      await WinixAPI.setAirflow(this.deviceId, airflow);
+    } catch (e) {
+      assertError(e);
+      this.log.error('error setting rotation speed: ' + e.message);
+      throw new this.hap.HapStatusError(HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+    }
+
     this.latestStatus.airflow = airflow;
     this.latestStatus.mode = Mode.Manual;
     this.sendHomekitUpdate();
   }
 
   async getAirQuality(): Promise<CharacteristicValue> {
-    const airQuality: AirQuality = await WinixAPI.getAirQuality(this.deviceId);
+    let airQuality: AirQuality;
+
+    try {
+      airQuality = await WinixAPI.getAirQuality(this.deviceId);
+    } catch (e) {
+      assertError(e);
+      this.log.error('error getting air quality: ' + e.message);
+      throw new this.hap.HapStatusError(HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+    }
+
     this.latestStatus.airQuality = airQuality;
 
     this.log.debug('getAirQuality():', airQuality);
@@ -162,7 +228,16 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
   }
 
   async getPlasmawave(): Promise<CharacteristicValue> {
-    const plasmawave: Plasmawave = await WinixAPI.getPlasmawave(this.deviceId);
+    let plasmawave: Plasmawave;
+
+    try {
+      plasmawave = await WinixAPI.getPlasmawave(this.deviceId);
+    } catch (e) {
+      assertError(e);
+      this.log.error('error getting plasmawave state: ' + e.message);
+      throw new this.hap.HapStatusError(HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+    }
+
     this.latestStatus.plasmawave = plasmawave;
 
     this.log.debug('getPlasmawave():', plasmawave);
@@ -173,7 +248,14 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
     const plasmawave: Plasmawave = this.toPlasmawave(state);
     this.log.debug(`setPlasmawave(${state}):`, plasmawave);
 
-    await WinixAPI.setPlasmawave(this.deviceId, plasmawave);
+    try {
+      await WinixAPI.setPlasmawave(this.deviceId, plasmawave);
+    } catch (e) {
+      assertError(e);
+      this.log.error('error setting plasmawave state: ' + e.message);
+      throw new this.hap.HapStatusError(HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+    }
+
     this.latestStatus.plasmawave = plasmawave;
     this.sendHomekitUpdate();
   }
@@ -283,3 +365,8 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
   }
 }
 
+function assertError(error: unknown): asserts error is Error {
+  if (!(error instanceof Error)) {
+    throw error;
+  }
+}
