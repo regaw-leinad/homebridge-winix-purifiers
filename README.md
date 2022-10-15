@@ -1,7 +1,7 @@
 # homebridge-winix-purifiers
 
-![GitHub Workflow Status](https://img.shields.io/github/workflow/status/regaw-leinad/homebridge-winix-purifiers/Build%20and%20Lint)
-![npm](https://img.shields.io/npm/dm/homebridge-winix-purifiers)
+[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/regaw-leinad/homebridge-winix-purifiers/Build%20and%20Lint)](https://github.com/regaw-leinad/homebridge-winix-purifiers/actions)
+[![npm](https://img.shields.io/npm/dt/homebridge-winix-purifiers)](https://www.npmjs.com/package/homebridge-winix-purifiers)
 
 [Homebridge](https://homebridge.io) plugin providing support for [Winix](https://www.winixamerica.com) air purifiers.
 
