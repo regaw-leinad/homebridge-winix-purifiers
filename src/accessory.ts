@@ -13,6 +13,7 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
   private readonly purifier: Service;
   private readonly airQuality?: Service;
   private readonly plasmawave?: Service;
+  private readonly ambientLight?: Service;
 
   constructor(log: Logging, config: AccessoryConfig, api: API) {
     this.hap = api.hap;
@@ -20,13 +21,7 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
 
     const deviceName = config.name;
     this.deviceId = config.deviceId;
-    this.latestStatus = {
-      power: Power.Off,
-      mode: Mode.Auto,
-      airflow: Airflow.Low,
-      airQuality: AirQuality.Good,
-      plasmawave: Plasmawave.On,
-    };
+    this.latestStatus = {};
     this.services = [];
 
     // Create services
@@ -39,6 +34,10 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
 
     if (config.exposePlasmawave) {
       this.plasmawave = this.registerService(new this.hap.Service.Switch(`${deviceName} Plasmawave`));
+    }
+
+    if (config.exposeAmbientLight) {
+      this.ambientLight = this.registerService(new this.hap.Service.LightSensor(`${deviceName} Ambient Light`));
     }
 
     // Assign characteristics
@@ -56,6 +55,7 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
 
     purifierInfo
       .setCharacteristic(this.hap.Characteristic.Manufacturer, 'Winix')
+      .setCharacteristic(this.hap.Characteristic.SerialNumber, config.serialNumber)
       .setCharacteristic(this.hap.Characteristic.Model, config.model);
 
     this.airQuality?.getCharacteristic(this.hap.Characteristic.AirQuality)
@@ -64,6 +64,9 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
     this.plasmawave?.getCharacteristic(this.hap.Characteristic.On)
       .onGet(this.getPlasmawave.bind(this))
       .onSet(this.setPlasmawave.bind(this));
+
+    this.ambientLight?.getCharacteristic(this.hap.Characteristic.CurrentAmbientLightLevel)
+      .onGet(this.getAmbientLight.bind(this));
   }
 
   async getActiveState(): Promise<Nullable<CharacteristicValue>> {
@@ -260,15 +263,50 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
     this.sendHomekitUpdate();
   }
 
+  async getAmbientLight(): Promise<CharacteristicValue> {
+    let ambientLight: number;
+
+    try {
+      ambientLight = await WinixAPI.getAmbientLight(this.deviceId);
+    } catch (e) {
+      assertError(e);
+      this.log.error('error getting ambient light: ' + e.message);
+      throw new this.hap.HapStatusError(HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+    }
+
+    this.latestStatus.ambientLight = ambientLight;
+
+    this.log.debug('getAmbientLight():', ambientLight);
+    return ambientLight;
+  }
+
   private sendHomekitUpdate(): void {
     this.log.debug('sendHomekitUpdate()');
 
-    this.purifier.updateCharacteristic(this.hap.Characteristic.Active, this.toActiveState(this.latestStatus.power));
-    this.purifier.updateCharacteristic(this.hap.Characteristic.CurrentAirPurifierState, this.toCurrentState(this.latestStatus.power));
-    this.purifier.updateCharacteristic(this.hap.Characteristic.TargetAirPurifierState, this.toTargetState(this.latestStatus.mode));
-    this.purifier.updateCharacteristic(this.hap.Characteristic.RotationSpeed, this.toRotationSpeed(this.latestStatus.airflow));
-    this.airQuality?.updateCharacteristic(this.hap.Characteristic.AirQuality, this.toAirQuality(this.latestStatus.airQuality));
-    this.plasmawave?.updateCharacteristic(this.hap.Characteristic.On, this.toSwitch(this.latestStatus.plasmawave));
+    if (this.latestStatus.power !== undefined) {
+      this.purifier.updateCharacteristic(this.hap.Characteristic.Active, this.toActiveState(this.latestStatus.power));
+      this.purifier.updateCharacteristic(this.hap.Characteristic.CurrentAirPurifierState, this.toCurrentState(this.latestStatus.power));
+    }
+
+    if (this.latestStatus.mode !== undefined) {
+      this.purifier.updateCharacteristic(this.hap.Characteristic.TargetAirPurifierState, this.toTargetState(this.latestStatus.mode));
+    }
+
+    if (this.latestStatus.airflow !== undefined) {
+      this.purifier.updateCharacteristic(this.hap.Characteristic.RotationSpeed, this.toRotationSpeed(this.latestStatus.airflow));
+    }
+
+    if (this.airQuality !== undefined && this.latestStatus.airQuality !== undefined) {
+      this.airQuality?.updateCharacteristic(this.hap.Characteristic.AirQuality, this.toAirQuality(this.latestStatus.airQuality));
+    }
+
+    if (this.plasmawave !== undefined && this.latestStatus.plasmawave !== undefined) {
+      this.plasmawave?.updateCharacteristic(this.hap.Characteristic.On, this.toSwitch(this.latestStatus.plasmawave));
+    }
+
+    if (this.ambientLight !== undefined && this.latestStatus.ambientLight !== undefined) {
+      this.ambientLight?.updateCharacteristic(this.hap.Characteristic.CurrentAmbientLightLevel, this.latestStatus.ambientLight);
+    }
   }
 
   private toActiveState(power: Power): CharacteristicValue {

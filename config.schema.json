@@ -35,6 +35,13 @@
         "type": "string",
         "required": true
       },
+      "serialNumber": {
+        "title": "Serial Number",
+        "description": "The serial number of your Winix air purifier",
+        "type": "string",
+        "default": "Default-SerialNumber",
+        "required": false
+      },
       "exposeAirQuality": {
         "title": "Air Quality Sensor",
         "description": "Whether or not to expose the air quality sensor to HomeKit",
@@ -44,6 +51,12 @@
       "exposePlasmawave": {
         "title": "Plasmawave Switch",
         "description": "Whether or not to expose a switch for Plasmawave on/off",
+        "type": "boolean",
+        "default": false
+      },
+      "exposeAmbientLight": {
+        "title": "Ambient Light Sensor",
+        "description": "Whether or not to expose the ambient light sensor to HomeKit",
         "type": "boolean",
         "default": false
       }
