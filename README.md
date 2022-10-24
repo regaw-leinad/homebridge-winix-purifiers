@@ -26,7 +26,8 @@ The following features are supported on the air purifiers:
 
 The following features are optionally supported:
 
-* Show air quality
+* Expose air quality
+* Expose ambient light
 * Expose switch to turn Plasmawave `on` / `off`
 
 ## Device Support
@@ -58,7 +59,9 @@ In your `config.json`, add and update the following under the `accessories` sect
       "name": "Bedroom Air Purifier",
       "model": "C545",
       "deviceId": "ABCDEF012345_abcde01234",
+      "serialNumber": "WNXAI40001234",
       "exposeAirQuality": true,
+      "exposeAmbientLight": false,
       "exposePlasmawave": false
     }
   ]
@@ -67,14 +70,16 @@ In your `config.json`, add and update the following under the `accessories` sect
 
 ### Properties
 
-| Parameter          | Note                                                                            |
-|--------------------|---------------------------------------------------------------------------------|
-| `accessory`        | must always be set to `WinixPurifier`                                           |
-| `name`             | a human-readable name for the air purifier                                      |
-| `model`            | the model of the [supported air purifier](#Device-Support)                      |
-| `deviceId`         | the unique identifier of the device (see below for details on how to find this) |
-| `exposeAirQuality` | _(optional)_ whether to expose an air quality sensor                            |
-| `exposePlasmawave` | _(optional)_ whether to expose Plasmawave control as a `Switch`                 |
+| Parameter            | Note                                                                            |
+|----------------------|---------------------------------------------------------------------------------|
+| `accessory`          | must always be set to `WinixPurifier`                                           |
+| `name`               | a human-readable name for the air purifier                                      |
+| `model`              | the model of the [supported air purifier](#Device-Support)                      |
+| `deviceId`           | the unique identifier of the device (see below for details on how to find this) |
+| `serialNumber`       | _(optional)_ the serial number of the device                                    |
+| `exposeAirQuality`   | _(optional)_ whether to expose an air quality sensor                            |
+| `exposeAmbientLight` | _(optional)_ whether to expose an ambient light sensor                          |
+| `exposePlasmawave`   | _(optional)_ whether to expose Plasmawave control as a `Switch`                 |
 
 ## Device ids
 
