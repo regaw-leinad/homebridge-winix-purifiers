@@ -1,6 +1,8 @@
 import { AccessoryConfig, AccessoryPlugin, API, CharacteristicValue, HAP, HAPStatus, Logging, Nullable, Service } from 'homebridge';
 import { Airflow, AirQuality, DeviceStatus, Mode, Plasmawave, Power, WinixAPI } from 'winix-api';
 
+const MIN_AMBIENT_LIGHT = 0.0001;
+
 export class WinixPurifierAccessory implements AccessoryPlugin {
 
   private readonly hap: HAP;
@@ -274,6 +276,8 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
       throw new this.hap.HapStatusError(HAPStatus.SERVICE_COMMUNICATION_FAILURE);
     }
 
+    // Fix ambient light value under 0.0001 warning
+    ambientLight = Math.max(ambientLight, MIN_AMBIENT_LIGHT);
     this.latestStatus.ambientLight = ambientLight;
 
     this.log.debug('getAmbientLight():', ambientLight);
