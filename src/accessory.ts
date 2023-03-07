@@ -10,7 +10,7 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
 
   private readonly deviceId: string;
   private readonly latestStatus: DeviceStatus;
-  private readonly cacheIntervalSeconds: number;
+  private readonly cacheIntervalMs: number;
   private lastWinixPoll: number;
 
   private readonly services: Service[];
@@ -26,7 +26,7 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
     const deviceName = config.name;
     this.deviceId = config.deviceId;
     this.latestStatus = {};
-    this.cacheIntervalSeconds = config.cacheIntervalSeconds * 1000 || 10_000;
+    this.cacheIntervalMs = config.cacheIntervalSeconds * 1000 || 10_000;
     this.lastWinixPoll = -1;
     this.services = [];
 
@@ -434,7 +434,7 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
   }
 
   private shouldUseCachedValue(v?: unknown): boolean {
-    return v !== undefined && Date.now() - this.lastWinixPoll < this.cacheIntervalSeconds;
+    return v !== undefined && Date.now() - this.lastWinixPoll < this.cacheIntervalMs;
   }
 
   private polledWinix() {
