@@ -10,6 +10,8 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
 
   private readonly deviceId: string;
   private readonly latestStatus: DeviceStatus;
+  private readonly cacheIntervalSeconds: number;
+  private lastWinixPoll: number;
 
   private readonly services: Service[];
   private readonly purifier: Service;
@@ -24,6 +26,8 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
     const deviceName = config.name;
     this.deviceId = config.deviceId;
     this.latestStatus = {};
+    this.cacheIntervalSeconds = config.cacheIntervalSeconds * 1000 || 10_000;
+    this.lastWinixPoll = -1;
     this.services = [];
 
     // Create services
@@ -72,6 +76,11 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
   }
 
   async getActiveState(): Promise<Nullable<CharacteristicValue>> {
+    if (this.shouldUseCachedValue(this.latestStatus.power)) {
+      this.log.debug('getActiveState() (cached)', this.latestStatus.power);
+      return this.toActiveState(this.latestStatus.power!);
+    }
+
     let power: Power;
 
     try {
@@ -83,9 +92,10 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
     }
 
     this.latestStatus.power = power;
+    this.polledWinix();
 
     this.log.debug('getActiveState()', power);
-    return power === Power.On ? this.hap.Characteristic.Active.ACTIVE : this.hap.Characteristic.Active.INACTIVE;
+    return this.toActiveState(power);
   }
 
   async setActiveState(state: CharacteristicValue) {
@@ -110,6 +120,11 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
   }
 
   async getCurrentState(): Promise<CharacteristicValue> {
+    if (this.shouldUseCachedValue(this.latestStatus.power)) {
+      this.log.debug('getCurrentState() (cached)', this.latestStatus.power);
+      return this.toCurrentState(this.latestStatus.power!);
+    }
+
     let power: Power;
 
     try {
@@ -121,13 +136,18 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
     }
 
     this.latestStatus.power = power;
+    this.polledWinix();
 
     this.log.debug('getCurrentState()', power);
-    return power === Power.On ? this.hap.Characteristic.CurrentAirPurifierState.PURIFYING_AIR :
-      this.hap.Characteristic.CurrentAirPurifierState.INACTIVE;
+    return this.toCurrentState(power);
   }
 
   async getTargetState(): Promise<CharacteristicValue> {
+    if (this.shouldUseCachedValue(this.latestStatus.mode)) {
+      this.log.debug('getTargetState() (cached)', this.latestStatus.mode);
+      return this.toTargetState(this.latestStatus.mode!);
+    }
+
     let mode: Mode;
 
     try {
@@ -139,10 +159,10 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
     }
 
     this.latestStatus.mode = mode;
+    this.polledWinix();
 
     this.log.debug('getTargetState()', mode);
-    return mode === Mode.Auto ? this.hap.Characteristic.TargetAirPurifierState.AUTO :
-      this.hap.Characteristic.TargetAirPurifierState.MANUAL;
+    return this.toTargetState(mode);
   }
 
   async setTargetState(state: CharacteristicValue) {
@@ -182,6 +202,11 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
   }
 
   async getRotationSpeed(): Promise<CharacteristicValue> {
+    if (this.shouldUseCachedValue(this.latestStatus.airflow)) {
+      this.log.debug('getRotationSpeed() (cached)', this.latestStatus.airflow);
+      return this.toRotationSpeed(this.latestStatus.airflow!);
+    }
+
     let airflow: Airflow;
 
     try {
@@ -193,6 +218,7 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
     }
 
     this.latestStatus.airflow = airflow;
+    this.polledWinix();
 
     this.log.debug('getRotationSpeed():', airflow);
     return this.toRotationSpeed(airflow);
@@ -216,6 +242,11 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
   }
 
   async getAirQuality(): Promise<CharacteristicValue> {
+    if (this.shouldUseCachedValue(this.latestStatus.airQuality)) {
+      this.log.debug('getAirQuality() (cached)', this.latestStatus.airQuality);
+      return this.toAirQuality(this.latestStatus.airQuality!);
+    }
+
     let airQuality: AirQuality;
 
     try {
@@ -227,12 +258,18 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
     }
 
     this.latestStatus.airQuality = airQuality;
+    this.polledWinix();
 
     this.log.debug('getAirQuality():', airQuality);
     return this.toAirQuality(airQuality);
   }
 
   async getPlasmawave(): Promise<CharacteristicValue> {
+    if (this.shouldUseCachedValue(this.latestStatus.plasmawave)) {
+      this.log.debug('getPlasmawave() (cached)', this.latestStatus.plasmawave);
+      return this.toSwitch(this.latestStatus.plasmawave!);
+    }
+
     let plasmawave: Plasmawave;
 
     try {
@@ -244,6 +281,7 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
     }
 
     this.latestStatus.plasmawave = plasmawave;
+    this.polledWinix();
 
     this.log.debug('getPlasmawave():', plasmawave);
     return this.toSwitch(plasmawave);
@@ -266,6 +304,11 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
   }
 
   async getAmbientLight(): Promise<CharacteristicValue> {
+    if (this.shouldUseCachedValue(this.latestStatus.ambientLight)) {
+      this.log.debug('getAmbientLight() (cached)', this.latestStatus.ambientLight);
+      return this.latestStatus.ambientLight!;
+    }
+
     let ambientLight: number;
 
     try {
@@ -279,6 +322,7 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
     // Fix ambient light value under 0.0001 warning
     ambientLight = Math.max(ambientLight, MIN_AMBIENT_LIGHT);
     this.latestStatus.ambientLight = ambientLight;
+    this.polledWinix();
 
     this.log.debug('getAmbientLight():', ambientLight);
     return ambientLight;
@@ -387,6 +431,14 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
       default:
         return this.hap.Characteristic.AirQuality.UNKNOWN;
     }
+  }
+
+  private shouldUseCachedValue(v?: unknown): boolean {
+    return v !== undefined && Date.now() - this.lastWinixPoll < this.cacheIntervalSeconds;
+  }
+
+  private polledWinix() {
+    this.lastWinixPoll = Date.now();
   }
 
   private toSwitch(plasmawave: Plasmawave): CharacteristicValue {

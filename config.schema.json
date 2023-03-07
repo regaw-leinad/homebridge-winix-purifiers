@@ -59,6 +59,13 @@
         "description": "Whether or not to expose the ambient light sensor to HomeKit",
         "type": "boolean",
         "default": false
+      },
+      "cacheIntervalSeconds": {
+        "title": "Winix Response Cache Interval (seconds)",
+        "description": "Time, in seconds, for how long to reuse the cached response from Winix",
+        "type": "number",
+        "default": 10,
+        "required": true
       }
     }
   }
