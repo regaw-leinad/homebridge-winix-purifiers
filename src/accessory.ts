@@ -26,7 +26,7 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
     const deviceName = config.name;
     this.deviceId = config.deviceId;
     this.latestStatus = {};
-    this.cacheIntervalMs = config.cacheIntervalSeconds * 1000 || 10_000;
+    this.cacheIntervalMs = config.cacheIntervalSeconds * 1000 || 60_000;
     this.lastWinixPoll = -1;
     this.services = [];
 
