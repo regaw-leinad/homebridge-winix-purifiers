@@ -1,5 +1,6 @@
 # homebridge-winix-purifiers
 
+[![verified-by-homebridge](https://badgen.net/badge/homebridge/verified/purple)](https://github.com/homebridge/homebridge/wiki/Verified-Plugins)
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/regaw-leinad/homebridge-winix-purifiers/build.yml)](https://github.com/regaw-leinad/homebridge-winix-purifiers/actions)
 [![npm](https://img.shields.io/npm/dt/homebridge-winix-purifiers)](https://www.npmjs.com/package/homebridge-winix-purifiers)
 
@@ -29,6 +30,15 @@ The following features are optionally supported:
 * Expose air quality
 * Expose ambient light
 * Expose switch to turn Plasmawave `on` / `off`
+
+### Winix API Response Caching
+
+By default, all individual responses from the Winix API are cached for `60` seconds. This helps prevent rate limiting
+and reduces the number of requests made to the Winix API. The value can be configured with the `cacheIntervalSeconds`
+property (see [Properties](#properties) below).
+
+I personally have `cacheIntervalSeconds` set to `600` seconds (10 minutes) since I don't need to know the air quality
+every minute - this significantly reduces the number of requests made to the Winix API.
 
 ## Device Support
 
@@ -62,7 +72,8 @@ In your `config.json`, add and update the following under the `accessories` sect
       "serialNumber": "WNXAI40001234",
       "exposeAirQuality": true,
       "exposeAmbientLight": false,
-      "exposePlasmawave": false
+      "exposePlasmawave": false,
+      "cacheIntervalSeconds": 60
     }
   ]
 }
@@ -70,16 +81,17 @@ In your `config.json`, add and update the following under the `accessories` sect
 
 ### Properties
 
-| Parameter            | Note                                                                            |
-|----------------------|---------------------------------------------------------------------------------|
-| `accessory`          | must always be set to `WinixPurifier`                                           |
-| `name`               | a human-readable name for the air purifier                                      |
-| `model`              | the model of the [supported air purifier](#Device-Support)                      |
-| `deviceId`           | the unique identifier of the device (see below for details on how to find this) |
-| `serialNumber`       | _(optional)_ the serial number of the device                                    |
-| `exposeAirQuality`   | _(optional)_ whether to expose an air quality sensor                            |
-| `exposeAmbientLight` | _(optional)_ whether to expose an ambient light sensor                          |
-| `exposePlasmawave`   | _(optional)_ whether to expose Plasmawave control as a `Switch`                 |
+| Name                   | Default Value | Note                                                                            |
+|------------------------|---------------|---------------------------------------------------------------------------------|
+| `accessory`            | Required      | must always be set to `WinixPurifier`                                           |
+| `name`                 | Required      | a human-readable name for the air purifier                                      |
+| `model`                | Required      | the model of the [supported air purifier](#Device-Support)                      |
+| `deviceId`             | Required      | the unique identifier of the device (see below for details on how to find this) |
+| `serialNumber`         | null          | the serial number of the device                                                 |
+| `exposeAirQuality`     | `false`       | whether to expose an air quality sensor                                         |
+| `exposeAmbientLight`   | `false`       | whether to expose an ambient light sensor                                       |
+| `exposePlasmawave`     | `false`       | whether to expose Plasmawave control as a `Switch`                              |
+| `cacheIntervalSeconds` | `60`          | the amount of seconds to cache the responses from the Winix API                 |
 
 ## Device ids
 
