@@ -63,8 +63,9 @@
       "cacheIntervalSeconds": {
         "title": "Winix Response Cache Interval (seconds)",
         "description": "Time, in seconds, for how long to reuse the cached response from Winix",
-        "type": "number",
-        "default": 10,
+        "type": "integer",
+        "default": 60,
+        "minimum": 1,
         "required": true
       }
     }
