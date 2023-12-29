@@ -26,7 +26,7 @@ Show the Homebridge logs here, remove any sensitive information.
 
 **Plugin Config:**
 
-```json
+```
 Show your Homebridge config.json here, remove any sensitive information.
 ```
 
