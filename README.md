@@ -108,3 +108,7 @@ a [Python CLI](https://github.com/hfern/winix). This CLI allows you to, among ot
 ids associated with your account. I have used this to successfully get my device ids. Follow the setup and auth steps
 in the [README](https://github.com/hfern/winix/blob/master/README.md). You should then be able to find your device ids
 in the file `~/.config/winix/config.json`
+
+> **Note:** While third-party tools like [@hfern](https://github.com/hfern) Python CLI can be incredibly useful, it's
+> important to be aware of potential security implications when using such tools. Always ensure you understand the risks
+> and follow best practices for security when handling your device's credentials.
