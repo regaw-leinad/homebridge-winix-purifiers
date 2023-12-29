@@ -104,11 +104,21 @@ plugin.
 ### [hfern/winix](https://github.com/hfern/winix)
 
 [@hfern](https://github.com/hfern) has reverse-engineered the Winix android app and created
-a [Python CLI](https://github.com/hfern/winix). This CLI allows you to, among other things, login and get the device
-ids associated with your account. I have used this to successfully get my device ids. Follow the setup and auth steps
-in the [README](https://github.com/hfern/winix/blob/master/README.md). You should then be able to find your device ids
-in the file `~/.config/winix/config.json`
+a [Python CLI](https://github.com/hfern/winix). This CLI allows you to, among other things, login and get the device ids
+associated with your account. I have used this to successfully get my device ids. Follow the setup and auth steps in
+the [README](https://github.com/hfern/winix/blob/master/README.md). You should then be able to find your device ids in
+the file `~/.config/winix/config.json`
 
-> **Note:** While third-party tools like [@hfern](https://github.com/hfern) Python CLI can be incredibly useful, it's
+Instead, you could also
+follow [these instructions](https://github.com/banzalik/homebridge-winix-c545/wiki/How-to-get-device-ID) and utilize
+`mitmproxy` to get your device ids.
+
+> **Note:** While third-party tools like [@hfern](https://github.com/hfern)'s Python CLI can be incredibly useful, it's
 > important to be aware of potential security implications when using such tools. Always ensure you understand the risks
 > and follow best practices for security when handling your device's credentials.
+
+## FAQ
+
+### Missing “Auto/Manual” switch in Home app?
+
+Please see [this issue](https://github.com/regaw-leinad/homebridge-winix-purifiers/issues/1) for more details.
