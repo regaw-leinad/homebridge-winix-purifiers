@@ -39,7 +39,6 @@
     "winix air purifier"
   ],
   "dependencies": {
-    "axios": "1.6.0",
     "winix-api": "1.1.2"
   },
   "devDependencies": {
