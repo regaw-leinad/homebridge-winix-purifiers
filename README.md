@@ -29,6 +29,7 @@ The following features are optionally supported:
 * Expose air quality
 * Expose ambient light
 * Expose switch to turn Plasmawave `on` / `off`
+* Expose switch to turn Auto Mode `on` / `off`
 
 ### Winix API Response Caching
 
@@ -73,6 +74,7 @@ In your `config.json`, add and update the following under the `accessories` sect
       "exposeAirQuality": true,
       "exposeAmbientLight": false,
       "exposePlasmawave": false,
+      "exposeAutoSwitch": false,
       "cacheIntervalSeconds": 60
     }
   ]
@@ -91,6 +93,7 @@ In your `config.json`, add and update the following under the `accessories` sect
 | `exposeAirQuality`     | `false`       | whether to expose an air quality sensor                                         |
 | `exposeAmbientLight`   | `false`       | whether to expose an ambient light sensor                                       |
 | `exposePlasmawave`     | `false`       | whether to expose Plasmawave control as a `Switch`                              |
+| `exposeAutoSwitch`     | `false`       | whether to expose Auto control as a `Switch`                                    |
 | `cacheIntervalSeconds` | `60`          | the amount of seconds to cache the responses from the Winix API                 |
 
 ## Device ids

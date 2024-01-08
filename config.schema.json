@@ -66,6 +66,12 @@
         "type": "boolean",
         "default": false
       },
+      "exposeAutoSwitch": {
+        "title": "Auto Switch",
+        "description": "Whether or not to expose a separate switch for Auto mode",
+        "type": "boolean",
+        "default": false
+      },
       "cacheIntervalSeconds": {
         "title": "Winix Response Cache Interval (seconds)",
         "description": "Time, in seconds, for how long to reuse the cached response from Winix",

@@ -18,6 +18,7 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
   private readonly airQuality?: Service;
   private readonly plasmawave?: Service;
   private readonly ambientLight?: Service;
+  private readonly autoSwitch?: Service;
 
   constructor(log: Logging, config: AccessoryConfig, api: API) {
     this.hap = api.hap;
@@ -44,6 +45,10 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
 
     if (config.exposeAmbientLight) {
       this.ambientLight = this.registerService(new this.hap.Service.LightSensor(`${deviceName} Ambient Light`));
+    }
+
+    if (config.exposeAutoSwitch) {
+      this.autoSwitch = this.registerService(new this.hap.Service.Switch(`${deviceName} Auto Mode`));
     }
 
     // Assign characteristics
@@ -73,6 +78,10 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
 
     this.ambientLight?.getCharacteristic(this.hap.Characteristic.CurrentAmbientLightLevel)
       .onGet(this.getAmbientLight.bind(this));
+
+    this.autoSwitch?.getCharacteristic(this.hap.Characteristic.On)
+      .onGet(this.getAutoSwitchState.bind(this))
+      .onSet(this.setAutoSwitchState.bind(this));
   }
 
   async getActiveState(): Promise<Nullable<CharacteristicValue>> {
@@ -142,6 +151,28 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
     return this.toCurrentState(power);
   }
 
+  async getAutoSwitchState(): Promise<CharacteristicValue> {
+    const targetState = await this.getTargetState();
+    this.log.debug('getAutoSwitchState() targetState', targetState);
+
+    // Translate target state (auto/manual mode) to auto switch state
+    const result = targetState === this.hap.Characteristic.TargetAirPurifierState.AUTO ?
+      this.hap.Characteristic.Active.ACTIVE : this.hap.Characteristic.Active.INACTIVE;
+
+    this.log.debug('getAutoSwitchState() result', result);
+    return result;
+  }
+
+  async setAutoSwitchState(state: CharacteristicValue) {
+    // Translate auto switch state to target state (auto/manual mode)
+    const proxyState: CharacteristicValue = state ?
+      this.hap.Characteristic.TargetAirPurifierState.AUTO :
+      this.hap.Characteristic.TargetAirPurifierState.MANUAL;
+
+    this.log.debug(`setAutoSwitchState(${state}) proxyState`, proxyState);
+    return this.setTargetState(proxyState);
+  }
+
   async getTargetState(): Promise<CharacteristicValue> {
     if (this.shouldUseCachedValue(this.latestStatus.mode)) {
       this.log.debug('getTargetState() (cached)', this.latestStatus.mode);
@@ -196,13 +227,13 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
     this.log.debug('scheduling homekit update to rotation speed');
 
     setTimeout(async () => {
-      await this.getRotationSpeed();
+      await this.getRotationSpeed(true);
       this.sendHomekitUpdate();
     }, 2000);
   }
 
-  async getRotationSpeed(): Promise<CharacteristicValue> {
-    if (this.shouldUseCachedValue(this.latestStatus.airflow)) {
+  async getRotationSpeed(force = true): Promise<CharacteristicValue> {
+    if (!force && this.shouldUseCachedValue(this.latestStatus.airflow)) {
       this.log.debug('getRotationSpeed() (cached)', this.latestStatus.airflow);
       return this.toRotationSpeed(this.latestStatus.airflow!);
     }
@@ -354,6 +385,13 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
 
     if (this.ambientLight !== undefined && this.latestStatus.ambientLight !== undefined) {
       this.ambientLight?.updateCharacteristic(this.hap.Characteristic.CurrentAmbientLightLevel, this.latestStatus.ambientLight);
+    }
+
+    if (this.autoSwitch !== undefined && this.latestStatus.mode !== undefined) {
+      this.autoSwitch?.updateCharacteristic(
+        this.hap.Characteristic.On,
+        this.toTargetState(this.latestStatus.mode) === this.hap.Characteristic.TargetAirPurifierState.AUTO,
+      );
     }
   }
 
