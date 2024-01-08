@@ -11,6 +11,9 @@ another Homebridge plugin, but it did not work out of the box (11 open issues at
 update was in September 2020 (over 2 years ago at the time of writing), I decided to dive in and create my own plugin to
 support it. We can expand this to other Winix purifiers with support from other device owners!
 
+### Have an issue or question?
+Please see the [FAQ](#faq) below for some common Q&A
+
 ## Features
 
 The following features are supported on the air purifiers:
