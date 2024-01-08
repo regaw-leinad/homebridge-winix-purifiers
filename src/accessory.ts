@@ -232,7 +232,7 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
     }, 2000);
   }
 
-  async getRotationSpeed(force = true): Promise<CharacteristicValue> {
+  async getRotationSpeed(force = false): Promise<CharacteristicValue> {
     if (!force && this.shouldUseCachedValue(this.latestStatus.airflow)) {
       this.log.debug('getRotationSpeed() (cached)', this.latestStatus.airflow);
       return this.toRotationSpeed(this.latestStatus.airflow!);
