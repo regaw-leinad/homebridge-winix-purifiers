@@ -40,7 +40,7 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
     }
 
     if (config.exposePlasmawave) {
-      this.plasmawave = this.registerService(new this.hap.Service.Switch(`${deviceName} Plasmawave`));
+      this.plasmawave = this.registerService(new this.hap.Service.Switch(`${deviceName} Plasmawave`, 'plasmawave'));
     }
 
     if (config.exposeAmbientLight) {
@@ -48,7 +48,7 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
     }
 
     if (config.exposeAutoSwitch) {
-      this.autoSwitch = this.registerService(new this.hap.Service.Switch(`${deviceName} Auto Mode`));
+      this.autoSwitch = this.registerService(new this.hap.Service.Switch(`${deviceName} Auto Mode`, 'auto'));
     }
 
     // Assign characteristics
