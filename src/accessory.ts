@@ -33,22 +33,36 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
 
     // Create services
     this.purifier = this.registerService(new this.hap.Service.AirPurifier(deviceName));
+    this.purifier.setPrimaryService(true);
+
     const purifierInfo: Service = this.registerService(new this.hap.Service.AccessoryInformation());
 
     if (config.exposeAirQuality) {
-      this.airQuality = this.registerService(new this.hap.Service.AirQualitySensor(`${deviceName} Air Quality`));
+      this.airQuality = this.registerService(
+        new this.hap.Service.AirQualitySensor('Air Quality', 'air-quality-sensor')
+          .setCharacteristic(this.hap.Characteristic.ConfiguredName, 'Air Quality'),
+      );
     }
 
     if (config.exposePlasmawave) {
-      this.plasmawave = this.registerService(new this.hap.Service.Switch(`${deviceName} Plasmawave`, 'plasmawave'));
+      this.plasmawave = this.registerService(
+        new this.hap.Service.Switch('Plasmawave', 'switch-plasmawave')
+          .setCharacteristic(this.hap.Characteristic.ConfiguredName, 'Plasmawave'),
+      );
     }
 
     if (config.exposeAmbientLight) {
-      this.ambientLight = this.registerService(new this.hap.Service.LightSensor(`${deviceName} Ambient Light`));
+      this.ambientLight = this.registerService(
+        new this.hap.Service.LightSensor('Ambient Light', 'light-sensor-ambient')
+          .setCharacteristic(this.hap.Characteristic.ConfiguredName, 'Ambient Light'),
+      );
     }
 
     if (config.exposeAutoSwitch) {
-      this.autoSwitch = this.registerService(new this.hap.Service.Switch(`${deviceName} Auto Mode`, 'auto'));
+      this.autoSwitch = this.registerService(
+        new this.hap.Service.Switch('Auto Mode', 'switch-auto')
+          .setCharacteristic(this.hap.Characteristic.ConfiguredName, 'Auto Mode'),
+      );
     }
 
     // Assign characteristics
