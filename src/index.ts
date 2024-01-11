@@ -1,6 +1,6 @@
 import { API } from 'homebridge';
-import { WinixPurifierAccessory } from './accessory';
+import { WinixPurifierPlatform } from './platform';
 
 export = (api: API) => {
-  api.registerAccessory('homebridge-winix-purifiers', 'WinixPurifier', WinixPurifierAccessory);
+  api.registerPlatform('homebridge-winix-purifiers', 'WinixPurifiers', WinixPurifierPlatform);
 };
