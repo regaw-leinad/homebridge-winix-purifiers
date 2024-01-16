@@ -32,9 +32,6 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
     this.services = [];
 
     // Create services
-    this.purifier = this.registerService(new this.hap.Service.AirPurifier(deviceName));
-    this.purifier.setPrimaryService(true);
-
     const purifierInfo: Service = this.registerService(new this.hap.Service.AccessoryInformation());
 
     if (config.exposeAirQuality) {
@@ -64,6 +61,9 @@ export class WinixPurifierAccessory implements AccessoryPlugin {
           .setCharacteristic(this.hap.Characteristic.ConfiguredName, 'Auto Mode'),
       );
     }
+
+    this.purifier = this.registerService(new this.hap.Service.AirPurifier(deviceName));
+    this.purifier.setPrimaryService(true);
 
     // Assign characteristics
     this.purifier.getCharacteristic(this.hap.Characteristic.Active)
