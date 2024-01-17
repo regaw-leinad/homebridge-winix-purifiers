@@ -1,80 +1,71 @@
 {
-  "pluginAlias": "WinixPurifier",
-  "pluginType": "accessory",
-  "singular": false,
+  "pluginAlias": "WinixPurifiers",
+  "pluginType": "platform",
+  "singular": true,
+  "customUi": true,
+  "customUiPath": "./dist/homebridge-ui",
   "headerDisplay": "Configure one or more Winix air purifiers below",
   "footerDisplay": "For help finding your device id, see [here](https://github.com/regaw-leinad/homebridge-winix-purifiers#device-ids)",
   "schema": {
     "type": "object",
     "properties": {
-      "name": {
-        "title": "Purifier Name",
-        "description": "The name of this Winix air purifier you want to expose to Homekit",
-        "type": "string",
-        "required": true,
-        "default": "My Winix Purifier"
-      },
-      "model": {
-        "title": "Model",
-        "description": "The model of your Winix air purifier",
-        "type": "string",
-        "default": "C545",
-        "required": true,
-        "oneOf": [
-          {
-            "title": "C545",
-            "enum": [
-              "C545"
-            ]
+      "auth": {
+        "type": "object",
+        "title": "Authentication",
+        "description": "Authentication settings for your Winix purifiers. These values are gathered from the login process and are not editable in the UI.",
+        "properties": {
+          "username": {
+            "type": "string",
+            "title": "Username",
+            "description": "Your Winix account username (email)",
+            "readonly": true
           },
-          {
-            "title": "C909",
-            "enum": [
-              "C909"
-            ]
+          "userId": {
+            "type": "string",
+            "title": "User ID",
+            "description": "Your Winix user ID",
+            "readonly": true
+          },
+          "refreshToken": {
+            "type": "string",
+            "title": "Refresh Token",
+            "description": "The refresh token for your Winix account",
+            "readonly": true
           }
+        },
+        "required": [
+          "refreshToken",
+          "username",
+          "userId"
         ]
-      },
-      "deviceId": {
-        "title": "Device ID",
-        "description": "The device id of your Winix air purifier",
-        "type": "string",
-        "required": true
-      },
-      "serialNumber": {
-        "title": "Serial Number",
-        "description": "The serial number of your Winix air purifier",
-        "type": "string",
-        "default": "Default-SerialNumber",
-        "required": false
       },
       "exposeAirQuality": {
         "title": "Air Quality Sensor",
-        "description": "Whether or not to expose the air quality sensor to HomeKit",
-        "type": "boolean",
-        "default": false
-      },
-      "exposePlasmawave": {
-        "title": "Plasmawave Switch",
-        "description": "Whether or not to expose a switch for Plasmawave on/off",
+        "description": "Whether or not to expose the air quality sensors to HomeKit",
         "type": "boolean",
         "default": false
       },
       "exposeAmbientLight": {
         "title": "Ambient Light Sensor",
-        "description": "Whether or not to expose the ambient light sensor to HomeKit",
+        "description": "Whether or not to expose the ambient light sensors to HomeKit",
+        "type": "boolean",
+        "default": false
+      },
+      "exposePlasmawave": {
+        "title": "Plasmawave Switch",
+        "description": "Whether or not to expose switches for Plasmawave on/off",
         "type": "boolean",
         "default": false
       },
       "exposeAutoSwitch": {
         "title": "Auto Switch",
-        "description": "Whether or not to expose a separate switch for Auto mode",
+        "description": "Whether or not to expose switches for Auto mode on/off",
         "type": "boolean",
         "default": false
       },
       "cacheIntervalSeconds": {
         "title": "Winix Response Cache Interval (seconds)",
-        "description": "Time, in seconds, for how long to reuse the cached response from Winix",
+        "description": "Time, in seconds, for how long to reuse cached responses from Winix",
         "type": "integer",
         "default": 60,
         "minimum": 1,

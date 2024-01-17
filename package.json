@@ -13,8 +13,8 @@
     "url": "https://github.com/regaw-leinad/homebridge-winix-purifiers/issues"
   },
   "engines": {
-    "node": ">=14.18.1",
-    "homebridge": ">=1.3.5"
+    "node": "^18 || ^20",
+    "homebridge": ">=1.7.0"
   },
   "main": "dist/index.js",
   "files": [
@@ -24,11 +24,13 @@
   "scripts": {
     "lint": "eslint src/**.ts --max-warnings=0",
     "watch": "npm run build && npm link && nodemon",
-    "build": "rimraf ./dist && tsc",
+    "build:ui": "tsc --project tsconfig.client.json",
+    "build:server": "tsc --project tsconfig.server.json",
+    "build": "rm -rf ./dist && npm run build:ui && npm run build:server && cp ./src/homebridge-ui/public/index.html ./dist/homebridge-ui/public/index.html",
     "validate": "npm run lint && npm run build",
     "prepublishOnly": "npm run validate",
     "version": "npm run validate",
-    "postversion": "git push && git push --tags && rimraf ./dist"
+    "postversion": "git push && git push --tags && rm -rf ./dist"
   },
   "keywords": [
     "homebridge-plugin",
@@ -41,16 +43,16 @@
     "winix air purifier"
   ],
   "dependencies": {
-    "winix-api": "1.1.2"
+    "@homebridge/plugin-ui-utils": "^1.0.1",
+    "winix-api": "1.4.0"
   },
   "devDependencies": {
-    "@types/node": "^18.11.0",
-    "@typescript-eslint/eslint-plugin": "^5.0.0",
-    "@typescript-eslint/parser": "^5.0.0",
+    "@types/node": "^20.11.0",
+    "@typescript-eslint/eslint-plugin": "^6.18.1",
+    "@typescript-eslint/parser": "^6.18.1",
     "eslint": "^8.0.1",
     "homebridge": "^1.7.0",
-    "nodemon": "^2.0.13",
-    "rimraf": "^3.0.2",
-    "typescript": "^4.4.4"
+    "nodemon": "^3.0.2",
+    "typescript": "^5.3.3"
   }
 }
