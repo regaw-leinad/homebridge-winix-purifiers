@@ -7,4 +7,5 @@ export interface WinixPlatformConfig {
   exposePlasmawave?: boolean;
   exposeAutoSwitch?: boolean;
   cacheIntervalSeconds?: number;
+  deviceRefreshIntervalSeconds?: number;
 }

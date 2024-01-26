@@ -4,41 +4,9 @@
   "singular": true,
   "customUi": true,
   "customUiPath": "./dist/homebridge-ui",
-  "headerDisplay": "Configure one or more Winix air purifiers below",
-  "footerDisplay": "For help finding your device id, see [here](https://github.com/regaw-leinad/homebridge-winix-purifiers#device-ids)",
   "schema": {
     "type": "object",
     "properties": {
-      "auth": {
-        "type": "object",
-        "title": "Authentication",
-        "description": "Authentication settings for your Winix purifiers. These values are gathered from the login process and are not editable in the UI.",
-        "properties": {
-          "username": {
-            "type": "string",
-            "title": "Username",
-            "description": "Your Winix account username (email)",
-            "readonly": true
-          },
-          "userId": {
-            "type": "string",
-            "title": "User ID",
-            "description": "Your Winix user ID",
-            "readonly": true
-          },
-          "refreshToken": {
-            "type": "string",
-            "title": "Refresh Token",
-            "description": "The refresh token for your Winix account",
-            "readonly": true
-          }
-        },
-        "required": [
-          "refreshToken",
-          "username",
-          "userId"
-        ]
-      },
       "exposeAirQuality": {
         "title": "Air Quality Sensor",
         "description": "Whether or not to expose the air quality sensors to HomeKit",
@@ -70,7 +38,75 @@
         "default": 60,
         "minimum": 1,
         "required": true
+      },
+      "deviceRefreshIntervalSeconds": {
+        "title": "Device Refresh Interval (seconds)",
+        "description": "Time, in seconds, for how often to poll Winix to refresh the device list. You can always just restart Homebridge to refresh the device list",
+        "type": "integer",
+        "default": 300,
+        "minimum": 10,
+        "required": true
+      },
+      "auth": {
+        "type": "object",
+        "title": "Authentication",
+        "properties": {
+          "username": {
+            "type": "string",
+            "title": "Username",
+            "description": "Your Winix account username (email)",
+            "readonly": true
+          },
+          "userId": {
+            "type": "string",
+            "title": "User ID",
+            "description": "Your Winix user ID",
+            "readonly": true
+          },
+          "refreshToken": {
+            "type": "string",
+            "title": "Refresh Token",
+            "description": "The refresh token for your Winix account",
+            "readonly": true
+          }
+        },
+        "required": [
+          "refreshToken",
+          "username",
+          "userId"
+        ]
       }
     }
-  }
+  },
+  "layout": [
+    {
+      "type": "fieldset",
+      "title": "Options",
+      "description": "Configuration options for Winix Purifiers",
+      "expandable": true,
+      "expanded": true,
+      "orderable": false,
+      "items": [
+        "exposeAirQuality",
+        "exposeAmbientLight",
+        "exposePlasmawave",
+        "exposeAutoSwitch",
+        "cacheIntervalSeconds",
+        "deviceRefreshIntervalSeconds"
+      ]
+    },
+    {
+      "type": "fieldset",
+      "title": "Authentication",
+      "description": "Generated Winix credentials (read-only)",
+      "expandable": true,
+      "expanded": false,
+      "orderable": false,
+      "items": [
+        "auth.username",
+        "auth.userId",
+        "auth.refreshToken"
+      ]
+    }
+  ]
 }

@@ -1,17 +1,7 @@
 /* eslint-disable no-console */
 const { homebridge } = window;
-const $newTokenButton = document.getElementById('winix-new-token');
-const $linkAccountHeader = document.getElementById('winix-link-account-header');
-
-if (!$newTokenButton) {
-  homebridge.toast.error('no winix-new-token element found!');
-  throw new Error('no winix-new-token element found!');
-}
-
-if (!$linkAccountHeader) {
-  homebridge.toast.error('no winix-link-account-header element found!');
-  throw new Error('no winix-link-account-header element found!');
-}
+const $newTokenButton = document.getElementById('winix-new-token')!;
+const $linkAccountHeader = document.getElementById('winix-link-account-header')!;
 
 // Register click handler for the "Link Account" button
 $newTokenButton.addEventListener('click', () => showLoginForm());
@@ -26,16 +16,19 @@ async function renderForm() {
   if (hasToken) {
     showConfigForm();
   } else {
-    showLoginForm();
+    await showLoginForm();
   }
 }
 
 // Init
 renderForm();
 
-function showLoginForm() {
+async function showLoginForm() {
   // Hide the standard form
   homebridge.hideSchemaForm();
+
+  $newTokenButton?.style.setProperty('display', 'none');
+  $linkAccountHeader?.style.setProperty('display', 'block');
 
   const loginForm = homebridge.createForm(
     {
@@ -63,6 +56,7 @@ function showLoginForm() {
     },
     {},
     'Log In',
+    await hasExistingAuth() ? 'Back' : undefined,
   );
 
   loginForm.onSubmit(async ({ email, password }) => {
@@ -80,6 +74,10 @@ function showLoginForm() {
       homebridge.hideSpinner();
     }
   });
+
+  // We know already that there is existing auth since the 'Back' button is shown,
+  // so we can just go back to the config form
+  loginForm.onCancel(() => showConfigForm());
 }
 
 function showConfigForm() {
@@ -96,6 +94,11 @@ async function setExistingAuth(auth) {
   ]);
   await homebridge.savePluginConfig();
   homebridge.toast.success('Refresh Token Updated', 'Winix Login Successful');
+}
+
+async function hasExistingAuth(): Promise<boolean> {
+  const [config] = await homebridge.getPluginConfig();
+  return !!config?.auth?.refreshToken;
 }
 
 interface HomebridgeError {
