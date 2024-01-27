@@ -6,6 +6,18 @@
 
 [Homebridge](https://homebridge.io) plugin providing support for [Winix](https://www.winixamerica.com) air purifiers.
 
+## Table of Contents
+
+- [Features](#features)
+- [Device Support](#device-support)
+- [Configuration](#configuration)
+    - [Upgrading from v1.x.x -> v2.x.x?](#upgrading-from-the-old-plugin-architecture-v1xx-to-the-new-one-v2xx)
+    - [Alternate Winix Account Setup for Homebridge](#alternate-winix-account-setup-for-homebridge)
+    - [Homebridge Configuration UI](#homebridge-configuration-ui)
+    - [Manual Configuration](#manual-configuration)
+- [FAQ](#faq)
+- [Acknowledgments](#acknowledgments)
+
 ## Features
 
 - **Dynamic Device Discovery**: Automatically discovers and configures Winix purifiers linked to your account.
@@ -101,7 +113,7 @@ While not recommended, if manual setup is required, add the following to the `pl
 
 ## FAQ
 
-### Updating from the old plugin architecture (v1.x.x) to the new one (v2.x.x)?
+### Upgrading from the old plugin architecture (v1.x.x) to the new one (v2.x.x)?
 
 Unfortunately, there's no way to easily migrate your purifiers from the old plugin architecture (v1.x.x) to the new one
 (v2.x.x). You'll need to:
@@ -109,7 +121,7 @@ Unfortunately, there's no way to easily migrate your purifiers from the old plug
 1. Remove the old plugin version's config either through the Homebridge UI or manually editing the `accessories` section
    of your `config.json`
 2. Restart Homebridge for the edits to take effect
-3. Update to the new plugin version in the Homebridge UI (or [manually](#manual-configuration))
+3. Upgrade to the new plugin version in the Homebridge UI (or [manually](#manual-configuration))
 4. Hard restart Homebridge. Pressing the "Restart" button in the Homebridge UI is not sufficient - you must stop the
    process and start it again. Please see the [Homebridge Wiki](https://github.com/homebridge/homebridge/wiki), find
    your platform, and follow the instructions in the "Configuration Reference" section for how to restart your instance
@@ -132,3 +144,6 @@ it to "Bedroom".
 - [@hfern](https://github.com/hfern) - wrote the
   [Python Driver and CLI for the Winix C545 Air Purifier](https://github.com/hfern/winix) in Python, which this plugin's
   [authentication system](https://github.com/regaw-leinad/winix-api) is heavily based on
+- [@martinianodl](https://github.com/martinianodl) - discovered the alternate Winix account setup for Homebridge
+- [@shyawnkarim](https://github.com/shyawnkarim) - all around good guy and initial plugin beta
+  tester ([hire him](https://www.linkedin.com/in/shyawnkarim)!)
