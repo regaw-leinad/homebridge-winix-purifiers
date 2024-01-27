@@ -28,11 +28,11 @@ While other models aren't explicitly blocked, they're not yet officially support
 
 ## Configuration
 
+### Alternate Winix Account Setup for Homebridge
+
 Before starting the configuration process, while not required, it's advisable to set up an alternate Winix account
 specifically for Homebridge use. This approach prevents the issue of being logged out of the Winix app when linking your
 account with Homebridge, as Winix restricts users to one active session at a time.
-
-### Alternate Winix Account Setup for Homebridge
 
 1. **Create an Alternate Account**: This account will be used exclusively for Winix + Homebridge. If you're a Gmail
    user, simply create one with `+homebridge` added to your current email (e.g., `myEmail+homebridge@gmail.com`) - this
