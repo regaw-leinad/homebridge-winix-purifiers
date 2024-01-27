@@ -101,15 +101,23 @@ While not recommended, if manual setup is required, add the following to the `pl
 
 ## FAQ
 
+### Updating from the old plugin architecture (v1.x.x) to the new one (v2.x.x)?
+
+Unfortunately, there's no way to easily migrate your purifiers from the old plugin architecture (v1.x.x) to the new one
+(v2.x.x). You'll need to:
+
+1. Remove the old plugin version's config either through the Homebridge UI or manually editing the `accessories` section
+   of your `config.json`
+2. Restart Homebridge for the edits to take effect
+3. Update to the new plugin version in the Homebridge UI (or [manually](#manual-configuration))
+4. Hard restart Homebridge. Pressing the "Restart" button in the Homebridge UI is not sufficient - you must stop the
+   process and start it again. Please see the [Homebridge Wiki](https://github.com/homebridge/homebridge/wiki), find
+   your platform, and follow the instructions in the "Configuration Reference" section for how to restart your instance
+5. Following the steps in the [Configuration](#configuration) section above to configure the new version of the plugin
+
 ### Missing “Auto/Manual” switch in Home app?
 
 Please see [this issue](https://github.com/regaw-leinad/homebridge-winix-purifiers/issues/1) for more details.
-
-### Early adopter and need to migrate from the old plugin architecture?
-
-Unfortunately, there's no way to migrate from the old plugin architecture (v1.x.x) to the new one (v2.x.x). You'll need
-to remove the old plugin configs in the `accessories` section of your `config.json` and configure this new plugin
-following the steps in the [Configuration](#configuration) section above.
 
 ### Having issues moving your purifier to a room in the Home app with the same name?
 
