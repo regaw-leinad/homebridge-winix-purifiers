@@ -1,11 +1,12 @@
-import { CharacteristicValue, HAPStatus, Logger, PlatformAccessory, Service } from 'homebridge';
 import { Airflow, AirQuality, DeviceStatus, Mode, Plasmawave, Power, WinixAPI, WinixDevice } from 'winix-api';
+import { CharacteristicValue, HAPStatus, Logger, PlatformAccessory, Service } from 'homebridge';
 import { WinixPurifierPlatform } from './platform';
 import { WinixPlatformConfig } from './config';
 import { assertError } from './errors';
 
-const MIN_AMBIENT_LIGHT = 0.0001;
 const DEFAULT_FILTER_LIFE_REPLACEMENT_PERCENTAGE = 10;
+const DEFAULT_CACHE_INTERVAL_SECONDS = 60;
+const MIN_AMBIENT_LIGHT = 0.0001;
 
 export class WinixPurifierAccessory {
 
@@ -31,7 +32,7 @@ export class WinixPurifierAccessory {
 
     this.deviceId = device.deviceId;
     this.latestStatus = {};
-    this.cacheIntervalMs = (config.cacheIntervalSeconds ?? 60) * 1000;
+    this.cacheIntervalMs = (config.cacheIntervalSeconds ?? DEFAULT_CACHE_INTERVAL_SECONDS) * 1000;
     this.lastWinixPoll = -1;
 
     // Create services

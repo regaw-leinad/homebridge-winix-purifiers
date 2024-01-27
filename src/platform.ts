@@ -1,9 +1,11 @@
 import { API, APIEvent, Categories, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, UnknownContext } from 'homebridge';
+import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
+import { WinixAccount, WinixDevice } from 'winix-api';
 import { WinixPurifierAccessory } from './accessory';
 import { WinixPlatformConfig } from './config';
-import { WinixAccount, WinixDevice } from 'winix-api';
-import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
 import { assertError } from './errors';
+
+const DEFAULT_DEVICE_REFRESH_INTERVAL_MINUTES = 60;
 
 export interface DeviceContext extends UnknownContext {
   device: WinixDevice;
@@ -47,7 +49,7 @@ export class WinixPurifierPlatform implements DynamicPlatformPlugin {
     await this.discoverDevices();
 
     // refresh devices on the configured interval
-    const refreshIntervalMs = (this.config.deviceRefreshIntervalMinutes ?? 10) * 60 * 1000;
+    const refreshIntervalMs = (this.config.deviceRefreshIntervalMinutes ?? DEFAULT_DEVICE_REFRESH_INTERVAL_MINUTES) * 60 * 1000;
     setInterval(async () => await this.discoverDevices(), refreshIntervalMs);
   }
 
