@@ -31,6 +31,15 @@
         "type": "boolean",
         "default": false
       },
+      "filterReplacementIndicatorPercentage": {
+        "title": "Filter Replacement Indicator Percentage",
+        "description": "Percentage of filter life remaining to trigger a filter replacement alert",
+        "type": "integer",
+        "default": 10,
+        "minimum": 0,
+        "maximum": 100,
+        "required": true
+      },
       "cacheIntervalSeconds": {
         "title": "Winix Response Cache Interval (seconds)",
         "description": "Time, in seconds, for how long to reuse cached responses from Winix",
@@ -39,12 +48,12 @@
         "minimum": 1,
         "required": true
       },
-      "deviceRefreshIntervalSeconds": {
-        "title": "Device Refresh Interval (seconds)",
-        "description": "Time, in seconds, for how often to poll Winix to refresh the device list. You can always just restart Homebridge to refresh the device list",
+      "deviceRefreshIntervalMinutes": {
+        "title": "Device Refresh Interval (minutes)",
+        "description": "Time, in minutes, for how often to poll Winix to refresh the device list. You can always just restart Homebridge to refresh the device list",
         "type": "integer",
-        "default": 300,
-        "minimum": 10,
+        "default": 10,
+        "minimum": 1,
         "required": true
       },
       "auth": {
@@ -91,8 +100,9 @@
         "exposeAmbientLight",
         "exposePlasmawave",
         "exposeAutoSwitch",
+        "filterReplacementIndicatorPercentage",
         "cacheIntervalSeconds",
-        "deviceRefreshIntervalSeconds"
+        "deviceRefreshIntervalMinutes"
       ]
     },
     {
