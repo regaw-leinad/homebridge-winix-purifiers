@@ -123,4 +123,4 @@ it to "Bedroom".
   first [Winix C545 Homebridge plugin](https://github.com/banzalik/homebridge-winix-c545)
 - [@hfern](https://github.com/hfern) - wrote the
   [Python Driver and CLI for the Winix C545 Air Purifier](https://github.com/hfern/winix) in Python, which this plugin's
-  authentication system is heavily based on
+  [authentication system](https://github.com/regaw-leinad/winix-api) is heavily based on
