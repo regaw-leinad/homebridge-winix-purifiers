@@ -29,22 +29,25 @@ While other models aren't explicitly blocked, they're not yet officially support
 ## Configuration
 
 Before starting the configuration process, while not required, it's advisable to set up an alternate Winix account
-specifically for Homebridge use. This approach prevents the issue of being logged out from one service when logging into
-the other, as Winix restricts users to one active session at a time.
+specifically for Homebridge use. This approach prevents the issue of being logged out of the Winix app when linking your
+account with Homebridge, as Winix restricts users to one active session at a time.
 
 ### Alternate Winix Account Setup for Homebridge
 
-1. **Create an Alternate Account**: If you're a Gmail user, simply append "+homebridge" to your current email (
-   e.g., `yourEmail+homebridge@gmail.com`). This modified email still routes to your primary inbox.
+1. **Create an Alternate Account**: This account will be used exclusively for Winix + Homebridge. If you're a Gmail
+   user, simply create one with `+homebridge` added to your current email (e.g., `myEmail+homebridge@gmail.com`) - this
+   modified email still routes to your primary inbox.
 2. **Device Sharing**: In your main Winix account within the app, go to `Device Settings` > `Device Sharing`, and add
    your alternate email. This shares control of your purifiers with the new account.
-3. **Update Filter Replacement Cycle (Optional)**: The alternate account's default setting is a 9-month filter
-   replacement cycle. It's important to adjust this to your preferred amount of months to ensure Homebridge displays an
-   accurate timeline for filter life. Without this adjustment, Homebridge might indicate a filter change sooner/later
-   than preferred.
-    - In the app, for each purifier, select the "Filter use life" tile, tap the settings gear in the top right, and
-      set `Replacement Cycle` to your desired number of months.
-4. **Log Into Homebridge**: Use the new account's credentials for Homebridge. Your devices will now be stable in
+3. **Update Filter Replacement Cycle (Optional)**: In your alternate Winix account within the app, the default setting
+   is a 9-month filter replacement cycle. It's important to adjust this to your preferred amount of months to ensure
+   Homebridge displays an accurate timeline for filter life. Without this adjustment, Homebridge might indicate a filter
+   change sooner/later than preferred.
+    - In the app under your alternate account, for each purifier, select the "Filter use life" tile, tap the settings
+      gear in the top right, and set `Replacement Cycle` to your desired number of months.
+4. **Switch to Main Account**: In the Winix app, switch to your main account, if you are not already. If you are
+   currently logged into your alternate account, log out and log back in with your main account.
+5. **Log Into Homebridge**: Use the new account's credentials for Homebridge. Your devices will now be stable in
    Homebridge, free from login conflicts with the Winix app.
 
 ### Homebridge Configuration UI
