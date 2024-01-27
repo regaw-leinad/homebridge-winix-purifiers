@@ -1,4 +1,4 @@
-import { Airflow, AirQuality, DeviceStatus, Mode, Plasmawave, Power, WinixAPI, WinixDevice } from 'winix-api';
+import { Airflow, AirQuality, DeviceStatus, Mode, Plasmawave, Power, WinixAPI } from 'winix-api';
 import { CharacteristicValue, HAPStatus, Logger, PlatformAccessory, Service } from 'homebridge';
 import { WinixPurifierPlatform } from './platform';
 import { WinixPlatformConfig } from './config';
@@ -26,18 +26,18 @@ export class WinixPurifierAccessory {
     private readonly log: Logger,
     private readonly platform: WinixPurifierPlatform,
     private readonly config: WinixPlatformConfig,
-    readonly accessory: PlatformAccessory,
+    private readonly accessory: PlatformAccessory,
   ) {
-    const device: WinixDevice = accessory.context.device;
+    const { deviceId, deviceAlias } = accessory.context.device;
 
-    this.deviceId = device.deviceId;
+    this.deviceId = deviceId;
     this.latestStatus = {};
     this.cacheIntervalMs = (config.cacheIntervalSeconds ?? DEFAULT_CACHE_INTERVAL_SECONDS) * 1000;
     this.lastWinixPoll = -1;
 
     // Create services
     this.purifier = accessory.getService(this.platform.Service.AirPurifier) ||
-      accessory.addService(this.platform.Service.AirPurifier, device.deviceAlias);
+      accessory.addService(this.platform.Service.AirPurifier, deviceAlias);
 
     // TODO: Add handler for get/set ConfiguredName
     this.purifier.getCharacteristic(this.platform.Characteristic.Active)
@@ -51,9 +51,18 @@ export class WinixPurifierAccessory {
     this.purifier.getCharacteristic(this.platform.Characteristic.RotationSpeed)
       .onGet(this.getRotationSpeed.bind(this))
       .onSet(this.setRotationSpeed.bind(this));
+    this.purifier.getCharacteristic(this.platform.Characteristic.FilterLifeLevel)
+      .onGet(this.getFilterLifeLevel.bind(this));
+    this.purifier.getCharacteristic(this.platform.Characteristic.FilterChangeIndication)
+      .onGet(this.getFilterChangeIndication.bind(this));
 
     this.purifierInfo = accessory.getService(this.platform.Service.AccessoryInformation) ||
       accessory.addService(this.platform.Service.AccessoryInformation);
+    this.purifierInfo.updateCharacteristic(this.platform.Characteristic.Manufacturer, 'Winix');
+    this.purifierInfo.getCharacteristic(this.platform.Characteristic.FirmwareRevision)
+      .onGet(() => accessory.context.device.mcuVer);
+    this.purifierInfo.getCharacteristic(this.platform.Characteristic.Model)
+      .onGet(() => accessory.context.device.modelName);
 
     if (config.exposeAirQuality) {
       this.airQuality = accessory.getServiceById(this.platform.Service.AirQualitySensor, 'air-quality-sensor') ||
@@ -92,59 +101,50 @@ export class WinixPurifierAccessory {
         .onGet(this.getAutoSwitchState.bind(this))
         .onSet(this.setAutoSwitchState.bind(this));
     }
-
-    this.updateDevice(device);
   }
 
-  updateDevice(device: WinixDevice): void {
-    if (device.deviceId !== this.deviceId) {
-      this.warn('updateDevice(): ignoring device properties update for different device id');
-      return;
-    }
+  getFilterLifeLevel(): CharacteristicValue {
+    const { filterMaxPeriod, filterReplaceDate } = this.accessory.context.device;
+    const period = parseInt(filterMaxPeriod, 10);
 
-    // Update the device info
-    this.purifierInfo
-      .updateCharacteristic(this.platform.Characteristic.Manufacturer, 'Winix')
-      .updateCharacteristic(this.platform.Characteristic.FirmwareRevision, device.mcuVer)
-      .updateCharacteristic(this.platform.Characteristic.Model, device.modelName);
-
-    // Update the filter statuses
-    const filterLife = this.getFilterLifePercentage(device);
-    const needsFilterReplacement =
-      filterLife <= (this.config.filterReplacementIndicatorPercentage ?? DEFAULT_FILTER_LIFE_REPLACEMENT_PERCENTAGE);
-
-    this.purifier
-      .updateCharacteristic(this.platform.Characteristic.FilterLifeLevel, filterLife)
-      .updateCharacteristic(
-        this.platform.Characteristic.FilterChangeIndication,
-        needsFilterReplacement ?
-          this.platform.Characteristic.FilterChangeIndication.CHANGE_FILTER :
-          this.platform.Characteristic.FilterChangeIndication.FILTER_OK,
-      );
-  }
-
-  private getFilterLifePercentage(device: WinixDevice): number {
-    const filterMaxPeriod = parseInt(device.filterMaxPeriod, 10);
-
-    if (isNaN(filterMaxPeriod)) {
-      this.debug('getFilterLifePercentage(): filterMaxPeriod is not a number:', device.filterMaxPeriod);
+    if (isNaN(period)) {
+      this.debug('getFilterLifeLevel(): device.filterMaxPeriod is not a number:', period);
       // just assuming 100% life if filterMaxPeriod is not valid
       return 100;
     }
 
     // Ensure the date is in ISO 8601 format
-    const isoDate = device.filterReplaceDate.replace(' ', 'T') + 'Z';
-    const filterReplaceDate = new Date(isoDate);
+    const isoDate = filterReplaceDate.replace(' ', 'T') + 'Z';
+    const replaceDate = new Date(isoDate);
     const currentDate = new Date();
 
     // Total lifespan in milliseconds
-    const totalLifespan = new Date(filterReplaceDate);
-    totalLifespan.setMonth(totalLifespan.getMonth() + filterMaxPeriod);
+    const totalLifespan = new Date(replaceDate);
+    totalLifespan.setMonth(totalLifespan.getMonth() + period);
 
-    const elapsedTime = currentDate.getTime() - filterReplaceDate.getTime();
-    const totalLifespanTime = totalLifespan.getTime() - filterReplaceDate.getTime();
+    const elapsedTime = currentDate.getTime() - replaceDate.getTime();
+    const totalLifespanTime = totalLifespan.getTime() - replaceDate.getTime();
     const lifeUsed = Math.min(Math.max(elapsedTime / totalLifespanTime, 0), 1);
-    return Math.round((1 - lifeUsed) * 100);
+    const lifeLevel = Math.round((1 - lifeUsed) * 100);
+
+    this.debug('getFilterLifeLevel()', lifeLevel);
+    return lifeLevel;
+  }
+
+  getFilterChangeIndication(): CharacteristicValue {
+    const filterLife = this.getFilterLifeLevel() as number;
+    const replacementPercentage = this.config.filterReplacementIndicatorPercentage ?? DEFAULT_FILTER_LIFE_REPLACEMENT_PERCENTAGE;
+    const shouldReplaceFilter = filterLife <= replacementPercentage ?
+      this.platform.Characteristic.FilterChangeIndication.CHANGE_FILTER :
+      this.platform.Characteristic.FilterChangeIndication.FILTER_OK;
+
+    this.debug(
+      'getFilterChangeIndication() filterLife:', filterLife,
+      'replacementPercentage:', replacementPercentage,
+      'shouldReplaceFilter:', shouldReplaceFilter,
+    );
+
+    return shouldReplaceFilter;
   }
 
   async getActiveState(): Promise<CharacteristicValue> {

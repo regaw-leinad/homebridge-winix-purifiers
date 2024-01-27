@@ -87,7 +87,6 @@ export class WinixPurifierPlatform implements DynamicPlatformPlugin {
         this.log.debug('Found existing accessory:', logName(device));
         accessory.context.device = device;
         this.api.updatePlatformAccessories([accessory]);
-        this.handlers.get(uuid)?.updateDevice(device);
       } else {
         this.log.debug('Found new accessory:', logName(device));
         accessory = new this.api.platformAccessory(device.deviceAlias, uuid, Categories.AIR_PURIFIER);
