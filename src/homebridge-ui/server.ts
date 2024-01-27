@@ -20,7 +20,7 @@ class PluginUiServer extends HomebridgePluginUiServer {
 
     let auth: WinixAuthResponse;
     try {
-      auth = await WinixAuth.login(email, password);
+      auth = await WinixAuth.login(email, password, 3);
     } catch (e: unknown) {
       const message = getErrorMessage(e);
       console.error(message);
