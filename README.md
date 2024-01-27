@@ -24,6 +24,8 @@ This plugin officially supports the following Winix air purifiers:
 * C545
 * C909
 
+While other models aren't explicitly blocked, they're not yet officially supported and may not work as expected.
+
 ## Configuration
 
 Before starting the configuration process, while not required, it's advisable to set up an alternate Winix account
@@ -49,6 +51,8 @@ the other, as Winix restricts users to one active session at a time.
 
 Easily configure the plugin through the [Homebridge Config UI X](https://www.npmjs.com/package/homebridge-config-ui-x).
 Simply provide your Winix account credentials for automatic device discovery and provisioning.
+
+<img src="./assets/link-account.gif" alt="Link Account" />
 
 ### Manual Configuration
 
