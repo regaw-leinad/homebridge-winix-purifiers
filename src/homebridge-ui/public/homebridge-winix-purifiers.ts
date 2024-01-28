@@ -1,4 +1,5 @@
 /* eslint-disable no-console */
+// @ts-expect-error: suppress TS error for missing homebridge type on window
 const { homebridge } = window;
 const $newTokenButton = document.getElementById('winix-new-token')!;
 const $linkAccountHeader = document.getElementById('winix-link-account-header')!;
