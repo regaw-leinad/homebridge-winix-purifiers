@@ -1,4 +1,14 @@
-import { API, APIEvent, Categories, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, UnknownContext } from 'homebridge';
+import {
+  AccessoryEventTypes,
+  API,
+  APIEvent,
+  Categories,
+  DynamicPlatformPlugin,
+  Logger,
+  PlatformAccessory,
+  PlatformConfig,
+  UnknownContext,
+} from 'homebridge';
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
 import { WinixAccount, WinixDevice } from 'winix-api';
 import { WinixPurifierAccessory } from './accessory';
@@ -82,17 +92,17 @@ export class WinixPurifierPlatform implements DynamicPlatformPlugin {
     for (const device of devices) {
       const uuid = this.api.hap.uuid.generate(device.deviceId);
       let accessory = this.accessories.get(uuid);
+      this.log.debug('Found', accessory ? 'existing' : 'new', 'accessory:', logName(device));
 
       if (accessory) {
-        this.log.debug('Found existing accessory:', logName(device));
         accessory.context.device = device;
         this.api.updatePlatformAccessories([accessory]);
       } else {
-        this.log.debug('Found new accessory:', logName(device));
         accessory = new this.api.platformAccessory(device.deviceAlias, uuid, Categories.AIR_PURIFIER);
         accessory.context.device = device;
+        const handler = this.createNewAccessoryHandler(accessory);
         this.accessories.set(uuid, accessory);
-        this.handlers.set(uuid, new WinixPurifierAccessory(this.log, this, this.config, accessory));
+        this.handlers.set(uuid, handler);
         accessoriesToAdd.push(accessory);
       }
 
@@ -106,7 +116,16 @@ export class WinixPurifierPlatform implements DynamicPlatformPlugin {
     this.removeOldDevices(discoveredUUIDs);
   }
 
-  private removeOldDevices(discoveredUUIDs: Set<string>) {
+  private createNewAccessoryHandler(accessory: PlatformAccessory<DeviceContext>): WinixPurifierAccessory {
+    // 🫣 suppress warning message about adding characteristics which aren't required / optional, since it isn't accurate
+    this.suppressCharacteristicWarnings(accessory);
+    const handler = new WinixPurifierAccessory(this.log, this, this.config, accessory);
+    this.unsuppressCharacteristicWarnings(accessory);
+
+    return handler;
+  }
+
+  private removeOldDevices(discoveredUUIDs: Set<string>): void {
     this.accessories.forEach((accessory) => {
       // if we've seen this accessory in discovered devices, don't remove it
       if (discoveredUUIDs.has(accessory.UUID)) {
@@ -124,6 +143,20 @@ export class WinixPurifierPlatform implements DynamicPlatformPlugin {
     this.log.debug('Loading cached accessory:', logName(accessory.context.device));
     this.accessories.set(accessory.UUID, accessory);
     this.handlers.set(accessory.UUID, new WinixPurifierAccessory(this.log, this, this.config, accessory));
+  }
+
+  private suppressCharacteristicWarnings(accessory: PlatformAccessory<DeviceContext>): void {
+    this.log.debug('Suppressing characteristic warnings for %s', logName(accessory.context.device));
+    accessory._associatedHAPAccessory.on(AccessoryEventTypes.CHARACTERISTIC_WARNING, this.doNada);
+  }
+
+  private unsuppressCharacteristicWarnings(accessory: PlatformAccessory<DeviceContext>): void {
+    this.log.debug('Unsuppressing characteristic warnings for %s', logName(accessory.context.device));
+    accessory._associatedHAPAccessory.removeListener(AccessoryEventTypes.CHARACTERISTIC_WARNING, this.doNada);
+  }
+
+  private doNada(): void {
+    // do nothing
   }
 }
 
