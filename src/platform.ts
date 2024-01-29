@@ -92,7 +92,7 @@ export class WinixPurifierPlatform implements DynamicPlatformPlugin {
     for (const device of devices) {
       const uuid = this.api.hap.uuid.generate(device.deviceId);
       let accessory = this.accessories.get(uuid);
-      this.log.debug('Found', accessory ? 'existing' : 'new', 'accessory:', logName(device));
+      this.log.debug('Found', accessory ? 'existing' : 'new', 'accessory:', this.logName(device));
 
       if (accessory) {
         accessory.context.device = device;
@@ -132,7 +132,7 @@ export class WinixPurifierPlatform implements DynamicPlatformPlugin {
         return;
       }
 
-      this.log.debug('Removing old accessory:', logName(accessory.context.device));
+      this.log.debug('Removing old accessory:', this.logName(accessory.context.device));
       this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
       this.accessories.delete(accessory.UUID);
       this.handlers.delete(accessory.UUID);
@@ -140,26 +140,26 @@ export class WinixPurifierPlatform implements DynamicPlatformPlugin {
   }
 
   configureAccessory(accessory: PlatformAccessory<DeviceContext>): void {
-    this.log.debug('Loading cached accessory:', logName(accessory.context.device));
+    this.log.debug('Loading cached accessory:', this.logName(accessory.context.device));
     this.accessories.set(accessory.UUID, accessory);
     this.handlers.set(accessory.UUID, new WinixPurifierAccessory(this.log, this, this.config, accessory));
   }
 
+  logName(device: WinixDevice): string {
+    return `${device.modelName}-${device.deviceAlias}`;
+  }
+
   private suppressCharacteristicWarnings(accessory: PlatformAccessory<DeviceContext>): void {
-    this.log.debug('Suppressing characteristic warnings for %s', logName(accessory.context.device));
+    this.log.debug('Suppressing characteristic warnings for %s', this.logName(accessory.context.device));
     accessory._associatedHAPAccessory.on(AccessoryEventTypes.CHARACTERISTIC_WARNING, this.doNada);
   }
 
   private unsuppressCharacteristicWarnings(accessory: PlatformAccessory<DeviceContext>): void {
-    this.log.debug('Unsuppressing characteristic warnings for %s', logName(accessory.context.device));
+    this.log.debug('Unsuppressing characteristic warnings for %s', this.logName(accessory.context.device));
     accessory._associatedHAPAccessory.removeListener(AccessoryEventTypes.CHARACTERISTIC_WARNING, this.doNada);
   }
 
   private doNada(): void {
     // do nothing
   }
-}
-
-function logName(device: WinixDevice): string {
-  return `${device.modelName}-${device.deviceAlias}`;
 }

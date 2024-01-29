@@ -1,6 +1,6 @@
 import { Airflow, AirQuality, DeviceStatus, Mode, Plasmawave, Power, WinixAPI } from 'winix-api';
 import { CharacteristicValue, HAPStatus, Logger, PlatformAccessory, Service } from 'homebridge';
-import { WinixPurifierPlatform } from './platform';
+import { DeviceContext, WinixPurifierPlatform } from './platform';
 import { WinixPlatformConfig } from './config';
 import { assertError } from './errors';
 
@@ -14,6 +14,7 @@ export class WinixPurifierAccessory {
   private readonly latestStatus: DeviceStatus;
   private readonly cacheIntervalMs: number;
   private lastWinixPoll: number;
+  private readonly servicesInUse: Set<Service>;
 
   private readonly purifier: Service;
   private readonly purifierInfo: Service;
@@ -26,7 +27,7 @@ export class WinixPurifierAccessory {
     private readonly log: Logger,
     private readonly platform: WinixPurifierPlatform,
     private readonly config: WinixPlatformConfig,
-    private readonly accessory: PlatformAccessory,
+    private readonly accessory: PlatformAccessory<DeviceContext>,
   ) {
     const { deviceId, deviceAlias } = accessory.context.device;
 
@@ -34,10 +35,12 @@ export class WinixPurifierAccessory {
     this.latestStatus = {};
     this.cacheIntervalMs = (config.cacheIntervalSeconds ?? DEFAULT_CACHE_INTERVAL_SECONDS) * 1000;
     this.lastWinixPoll = -1;
+    this.servicesInUse = new Set<Service>();
 
     // Create services
     this.purifier = accessory.getService(this.platform.Service.AirPurifier) ||
       accessory.addService(this.platform.Service.AirPurifier, deviceAlias);
+    this.servicesInUse.add(this.purifier);
 
     // TODO: Add handler for get/set ConfiguredName
     this.purifier.getCharacteristic(this.platform.Characteristic.Active)
@@ -63,6 +66,7 @@ export class WinixPurifierAccessory {
       .onGet(() => accessory.context.device.mcuVer);
     this.purifierInfo.getCharacteristic(this.platform.Characteristic.Model)
       .onGet(() => accessory.context.device.modelName);
+    this.servicesInUse.add(this.purifierInfo);
 
     if (config.exposeAirQuality) {
       this.airQuality = accessory.getServiceById(this.platform.Service.AirQualitySensor, 'air-quality-sensor') ||
@@ -71,6 +75,7 @@ export class WinixPurifierAccessory {
       this.airQuality.setCharacteristic(this.platform.Characteristic.ConfiguredName, 'Air Quality');
       this.airQuality.getCharacteristic(this.platform.Characteristic.AirQuality)
         .onGet(this.getAirQuality.bind(this));
+      this.servicesInUse.add(this.airQuality);
     }
 
     if (config.exposePlasmawave) {
@@ -81,6 +86,7 @@ export class WinixPurifierAccessory {
       this.plasmawave.getCharacteristic(this.platform.Characteristic.On)
         .onGet(this.getPlasmawave.bind(this))
         .onSet(this.setPlasmawave.bind(this));
+      this.servicesInUse.add(this.plasmawave);
     }
 
     if (config.exposeAmbientLight) {
@@ -90,6 +96,7 @@ export class WinixPurifierAccessory {
       this.ambientLight.setCharacteristic(this.platform.Characteristic.ConfiguredName, 'Ambient Light');
       this.ambientLight.getCharacteristic(this.platform.Characteristic.CurrentAmbientLightLevel)
         .onGet(this.getAmbientLight.bind(this));
+      this.servicesInUse.add(this.ambientLight);
     }
 
     if (config.exposeAutoSwitch) {
@@ -100,7 +107,21 @@ export class WinixPurifierAccessory {
       this.autoSwitch.getCharacteristic(this.platform.Characteristic.On)
         .onGet(this.getAutoSwitchState.bind(this))
         .onSet(this.setAutoSwitchState.bind(this));
+      this.servicesInUse.add(this.autoSwitch);
     }
+
+    this.pruneUnusedServices();
+  }
+
+  private pruneUnusedServices(): void {
+    this.accessory.services.forEach((service) => {
+      if (this.servicesInUse.has(service)) {
+        return;
+      }
+
+      this.debug('pruning unused service:', service.displayName);
+      this.accessory.removeService(service);
+    });
   }
 
   getFilterLifeLevel(): CharacteristicValue {
@@ -551,8 +572,7 @@ export class WinixPurifierAccessory {
   }
 
   private getDeviceLogPrefix(): string {
-    const { modelName, deviceAlias } = this.accessory.context.device;
-    return `[${modelName}-${deviceAlias}] `;
+    return `[${this.platform.logName(this.accessory.context.device)}] `;
   }
 
   private debug(message: string, ...parameters: unknown[]): void {
