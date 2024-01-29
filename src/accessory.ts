@@ -1,7 +1,7 @@
 import { Airflow, AirQuality, DeviceStatus, Mode, Plasmawave, Power, WinixAPI } from 'winix-api';
 import { CharacteristicValue, HAPStatus, Logger, PlatformAccessory, Service } from 'homebridge';
 import { DeviceContext, WinixPurifierPlatform } from './platform';
-import { WinixPlatformConfig } from './config';
+import { DeviceOverride, WinixPlatformConfig } from './config';
 import { assertError } from './errors';
 
 const DEFAULT_FILTER_LIFE_REPLACEMENT_PERCENTAGE = 10;
@@ -28,18 +28,27 @@ export class WinixPurifierAccessory {
     private readonly platform: WinixPurifierPlatform,
     private readonly config: WinixPlatformConfig,
     private readonly accessory: PlatformAccessory<DeviceContext>,
+    readonly override?: DeviceOverride,
   ) {
     const { deviceId, deviceAlias } = accessory.context.device;
 
-    this.deviceId = deviceId;
+    this.deviceId = override?.nameDevice ?? deviceId;
     this.latestStatus = {};
     this.cacheIntervalMs = (config.cacheIntervalSeconds ?? DEFAULT_CACHE_INTERVAL_SECONDS) * 1000;
     this.lastWinixPoll = -1;
     this.servicesInUse = new Set<Service>();
 
+    const deviceSerial = override?.serialNumber ?? 'WNXAI00000000';
+    const deviceName = override?.nameDevice ?? deviceAlias;
+    const airQualityName = override?.nameAirQuality ?? 'Air Quality';
+    const plasmawaveName = override?.namePlasmawave ?? 'Plasmawave';
+    const ambientLightName = override?.nameAmbientLight ?? 'Ambient Light';
+    const autoSwitchName = override?.nameAutoSwitch ?? 'Auto Mode';
+
     // Create services
     this.purifier = accessory.getService(this.platform.Service.AirPurifier) ||
-      accessory.addService(this.platform.Service.AirPurifier, deviceAlias);
+      accessory.addService(this.platform.Service.AirPurifier);
+    this.purifier.updateCharacteristic(this.platform.Characteristic.Name, deviceName);
     this.servicesInUse.add(this.purifier);
 
     // TODO: Add handler for get/set ConfiguredName
@@ -62,6 +71,7 @@ export class WinixPurifierAccessory {
     this.purifierInfo = accessory.getService(this.platform.Service.AccessoryInformation) ||
       accessory.addService(this.platform.Service.AccessoryInformation);
     this.purifierInfo.updateCharacteristic(this.platform.Characteristic.Manufacturer, 'Winix');
+    this.purifierInfo.updateCharacteristic(this.platform.Characteristic.SerialNumber, deviceSerial);
     this.purifierInfo.getCharacteristic(this.platform.Characteristic.FirmwareRevision)
       .onGet(() => accessory.context.device.mcuVer);
     this.purifierInfo.getCharacteristic(this.platform.Characteristic.Model)
@@ -70,9 +80,10 @@ export class WinixPurifierAccessory {
 
     if (config.exposeAirQuality) {
       this.airQuality = accessory.getServiceById(this.platform.Service.AirQualitySensor, 'air-quality-sensor') ||
-        accessory.addService(this.platform.Service.AirQualitySensor, 'Air Quality', 'air-quality-sensor');
+        accessory.addService(this.platform.Service.AirQualitySensor, airQualityName, 'air-quality-sensor');
+      this.airQuality.setCharacteristic(this.platform.Characteristic.Name, airQualityName);
       // TODO: Add handler for get/set ConfiguredName
-      this.airQuality.setCharacteristic(this.platform.Characteristic.ConfiguredName, 'Air Quality');
+      this.airQuality.setCharacteristic(this.platform.Characteristic.ConfiguredName, airQualityName);
       this.airQuality.getCharacteristic(this.platform.Characteristic.AirQuality)
         .onGet(this.getAirQuality.bind(this));
       this.servicesInUse.add(this.airQuality);
@@ -80,9 +91,10 @@ export class WinixPurifierAccessory {
 
     if (config.exposePlasmawave) {
       this.plasmawave = accessory.getServiceById(this.platform.Service.Switch, 'switch-plasmawave') ||
-        accessory.addService(this.platform.Service.Switch, 'Plasmawave', 'switch-plasmawave');
+        accessory.addService(this.platform.Service.Switch, plasmawaveName, 'switch-plasmawave');
+      this.plasmawave.setCharacteristic(this.platform.Characteristic.Name, plasmawaveName);
       // TODO: Add handler for get/set ConfiguredName
-      this.plasmawave.setCharacteristic(this.platform.Characteristic.ConfiguredName, 'Plasmawave');
+      this.plasmawave.setCharacteristic(this.platform.Characteristic.ConfiguredName, plasmawaveName);
       this.plasmawave.getCharacteristic(this.platform.Characteristic.On)
         .onGet(this.getPlasmawave.bind(this))
         .onSet(this.setPlasmawave.bind(this));
@@ -91,9 +103,10 @@ export class WinixPurifierAccessory {
 
     if (config.exposeAmbientLight) {
       this.ambientLight = accessory.getServiceById(this.platform.Service.LightSensor, 'light-sensor-ambient') ||
-        accessory.addService(this.platform.Service.LightSensor, 'Ambient Light', 'light-sensor-ambient');
+        accessory.addService(this.platform.Service.LightSensor, ambientLightName, 'light-sensor-ambient');
+      this.ambientLight.setCharacteristic(this.platform.Characteristic.Name, ambientLightName);
       // TODO: Add handler for get/set ConfiguredName
-      this.ambientLight.setCharacteristic(this.platform.Characteristic.ConfiguredName, 'Ambient Light');
+      this.ambientLight.setCharacteristic(this.platform.Characteristic.ConfiguredName, ambientLightName);
       this.ambientLight.getCharacteristic(this.platform.Characteristic.CurrentAmbientLightLevel)
         .onGet(this.getAmbientLight.bind(this));
       this.servicesInUse.add(this.ambientLight);
@@ -101,9 +114,10 @@ export class WinixPurifierAccessory {
 
     if (config.exposeAutoSwitch) {
       this.autoSwitch = accessory.getServiceById(this.platform.Service.Switch, 'switch-auto') ||
-        accessory.addService(this.platform.Service.Switch, 'Auto Mode', 'switch-auto');
+        accessory.addService(this.platform.Service.Switch, autoSwitchName, 'switch-auto');
+      this.autoSwitch.setCharacteristic(this.platform.Characteristic.Name, autoSwitchName);
       // TODO: Add handler for get/set ConfiguredName
-      this.autoSwitch.setCharacteristic(this.platform.Characteristic.ConfiguredName, 'Auto Mode');
+      this.autoSwitch.setCharacteristic(this.platform.Characteristic.ConfiguredName, autoSwitchName);
       this.autoSwitch.getCharacteristic(this.platform.Characteristic.On)
         .onGet(this.getAutoSwitchState.bind(this))
         .onSet(this.setAutoSwitchState.bind(this));

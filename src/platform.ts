@@ -9,10 +9,10 @@ import {
   PlatformConfig,
   UnknownContext,
 } from 'homebridge';
+import { DeviceOverride, WinixPlatformConfig } from './config';
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
 import { WinixAccount, WinixDevice } from 'winix-api';
 import { WinixPurifierAccessory } from './accessory';
-import { WinixPlatformConfig } from './config';
 import { assertError } from './errors';
 
 const DEFAULT_DEVICE_REFRESH_INTERVAL_MINUTES = 60;
@@ -27,9 +27,10 @@ export class WinixPurifierPlatform implements DynamicPlatformPlugin {
   public readonly HapStatusError = this.api.hap.HapStatusError;
 
   private readonly config: WinixPlatformConfig;
+  private readonly accessories: Map<string, PlatformAccessory<DeviceContext>>;
+  private readonly handlers: Map<string, WinixPurifierAccessory>;
+  private readonly deviceOverrides: Map<string, DeviceOverride>;
   private winix?: WinixAccount;
-  private accessories: Map<string, PlatformAccessory<DeviceContext>>;
-  private handlers: Map<string, WinixPurifierAccessory>;
 
   constructor(
     private readonly log: Logger,
@@ -39,6 +40,9 @@ export class WinixPurifierPlatform implements DynamicPlatformPlugin {
     this.config = platformConfig as WinixPlatformConfig;
     this.accessories = new Map<string, PlatformAccessory<DeviceContext>>();
     this.handlers = new Map<string, WinixPurifierAccessory>();
+    this.deviceOverrides = (this.config.deviceOverrides ?? [])
+      .reduce((m, o) => m.set(o.deviceId, o), new Map<string, DeviceOverride>());
+
     this.api.on(APIEvent.DID_FINISH_LAUNCHING, this.onFinishLaunching.bind(this));
   }
 
@@ -119,7 +123,8 @@ export class WinixPurifierPlatform implements DynamicPlatformPlugin {
   private createNewAccessoryHandler(accessory: PlatformAccessory<DeviceContext>): WinixPurifierAccessory {
     // 🫣 suppress warning message about adding characteristics which aren't required / optional, since it isn't accurate
     this.suppressCharacteristicWarnings(accessory);
-    const handler = new WinixPurifierAccessory(this.log, this, this.config, accessory);
+    const deviceOverride = this.deviceOverrides.get(accessory.context.device.deviceId);
+    const handler = new WinixPurifierAccessory(this.log, this, this.config, accessory, deviceOverride);
     this.unsuppressCharacteristicWarnings(accessory);
 
     return handler;
@@ -141,8 +146,10 @@ export class WinixPurifierPlatform implements DynamicPlatformPlugin {
 
   configureAccessory(accessory: PlatformAccessory<DeviceContext>): void {
     this.log.debug('Loading cached accessory:', this.logName(accessory.context.device));
+    const deviceOverride = this.deviceOverrides.get(accessory.context.device.deviceId);
+    const handler = new WinixPurifierAccessory(this.log, this, this.config, accessory, deviceOverride);
     this.accessories.set(accessory.UUID, accessory);
-    this.handlers.set(accessory.UUID, new WinixPurifierAccessory(this.log, this, this.config, accessory));
+    this.handlers.set(accessory.UUID, handler);
   }
 
   logName(device: WinixDevice): string {
