@@ -579,10 +579,6 @@ export class WinixPurifierAccessory {
     this.log.debug(this.getDeviceLogPrefix() + message, ...parameters);
   }
 
-  private warn(message: string, ...parameters: unknown[]): void {
-    this.log.warn(this.getDeviceLogPrefix() + message, ...parameters);
-  }
-
   private error(message: string, ...parameters: unknown[]): void {
     this.log.error(this.getDeviceLogPrefix() + message, ...parameters);
   }
