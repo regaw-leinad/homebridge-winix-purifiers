@@ -44,7 +44,7 @@
   ],
   "dependencies": {
     "@homebridge/plugin-ui-utils": "^1.0.1",
-    "winix-api": "1.4.0"
+    "winix-api": "1.4.1"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
