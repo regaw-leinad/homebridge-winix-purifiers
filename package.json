@@ -22,15 +22,21 @@
     "config.schema.json"
   ],
   "scripts": {
-    "lint": "eslint src/**.ts --max-warnings=0",
-    "watch": "npm run build && npm link && nodemon",
-    "build:ui": "tsc --project tsconfig.client.json",
-    "build:server": "tsc --project tsconfig.server.json",
-    "build": "rm -rf ./dist && npm run build:ui && npm run build:server && cp ./src/homebridge-ui/public/index.html ./dist/homebridge-ui/public/index.html",
-    "validate": "npm run lint && npm run build",
-    "prepublishOnly": "npm run validate",
-    "version": "npm run validate",
-    "postversion": "git push && git push --tags && rm -rf ./dist"
+    "build": "yarn clean && yarn build:ui && yarn build:server && cp -R ./src/homebridge-ui/ui/dist ./dist/homebridge-ui/public",
+    "build:server": "tsc",
+    "build:ui": "yarn --cwd ./src/homebridge-ui/ui build",
+    "ci": "yarn ci:server && yarn ci:ui",
+    "ci:server": "yarn --frozen-lockfile",
+    "ci:ui": "yarn --cwd ./src/homebridge-ui/ui --frozen-lockfile",
+    "clean": "rm -rf ./dist && rm -rf ./src/homebridge-ui/ui/dist",
+    "install:ui": "yarn --cwd ./src/homebridge-ui/ui",
+    "lint": "yarn lint:server && yarn lint:ui",
+    "lint:server": "eslint ./src/**.ts --max-warnings=0",
+    "lint:ui": "eslint ./src/homebridge-ui/**/**.ts --max-warnings=0",
+    "postversion": "git push && git push --tags && yarn clean",
+    "prepublishOnly": "yarn validate",
+    "validate": "yarn lint && yarn build",
+    "version": "yarn validate"
   },
   "keywords": [
     "homebridge-plugin",

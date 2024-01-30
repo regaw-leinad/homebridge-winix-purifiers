@@ -1,0 +1,52 @@
+<div id="header-winix-buttons" class="container" style="display: none;">
+    <div class="row justify-content-between align-items-center">
+        <!-- Left-aligned Reauthenticate button -->
+        <div class="col-auto">
+            <button id="btn-winix-new-token" class="btn btn-link m-0 p-0">
+                <i class="fa fa-redo mr-2"></i>
+                Reauthenticate with Winix
+            </button>
+            <span class="text-muted">Having auth issues? Press above to reauthenticate with your Winix credentials.</span>
+        </div>
+
+        <!-- Right-aligned Device Overrides button -->
+        <div class="col-auto">
+            <button id="btn-winix-device-overrides" class="btn btn-link m-0 p-0">
+                Device Overrides
+            </button>
+        </div>
+    </div>
+</div>
+
+
+<div id="header-winix-link-account" class="container" style="display: none;">
+    <div class="row justify-content-center">
+        <h4 class="primary-text mb-3">
+            Link Winix Account
+        </h4>
+    </div>
+    <div class="row text-center">
+        <span>
+            Logging in with your main Winix account?
+            It's recommended to create an alternate Winix account for Homebridge.
+            Read about it in the
+            <a href="https://github.com/regaw-leinad/homebridge-winix-purifiers/blob/platform/README.md#alternate-winix-account-setup-for-homebridge"
+               target="_blank" rel="noopener noreferrer">README</a><i class="fa fa-external-link ml-1"></i>
+        </span>
+    </div>
+</div>
+
+<div id="header-winix-device-overrides" class="container" style="display: none;">
+    <div class="row justify-content-center">
+        <h4 class="primary-text mb-3">
+            Update Device Information
+        </h4>
+    </div>
+    <div class="row text-center">
+        <span>
+            Click on the tab for each device and update anything you wish to display in HomeKit, then hit "Save All"
+        </span>
+    </div>
+</div>
+
+<script type="module" src="./src/main.ts?v=%HOMEBRIDGE_VERSION%"></script>

@@ -84,6 +84,60 @@
           "username",
           "userId"
         ]
+      },
+      "deviceOverrides": {
+        "type": "array",
+        "title": "Device Overrides",
+        "description": "Override the default device configuration for a specific device",
+        "items": {
+          "type": "object",
+          "properties": {
+            "deviceId": {
+              "type": "string",
+              "title": "Device ID",
+              "description": "The ID of the device",
+              "required": true,
+              "readonly": true
+            },
+            "serialNumber": {
+              "type": "string",
+              "title": "Serial Number",
+              "description": "The serial number of the device",
+              "placeholder": "WNXAI00000000",
+              "required": false
+            },
+            "nameDevice": {
+              "type": "string",
+              "title": "Device Name",
+              "description": "The display name of the device",
+              "required": false
+            },
+            "nameAirQualitySensor": {
+              "type": "string",
+              "title": "Air Quality Sensor Name",
+              "description": "The display name of the air quality sensor",
+              "required": false
+            },
+            "nameAmbientLightSensor": {
+              "type": "string",
+              "title": "Ambient Light Sensor Name",
+              "description": "The display name of the ambient light sensor",
+              "required": false
+            },
+            "namePlasmawaveSwitch": {
+              "type": "string",
+              "title": "Plasmawave Switch Name",
+              "description": "The display name of the Plasmawave switch",
+              "required": false
+            },
+            "nameAutoSwitch": {
+              "type": "string",
+              "title": "Auto Switch Name",
+              "description": "The display name of the Auto switch",
+              "required": false
+            }
+          }
+        }
       }
     }
   },
