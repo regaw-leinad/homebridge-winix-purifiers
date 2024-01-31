@@ -32,7 +32,7 @@ export class WinixPurifierAccessory {
   ) {
     const { deviceId, deviceAlias } = accessory.context.device;
 
-    this.deviceId = override?.nameDevice ?? deviceId;
+    this.deviceId = deviceId;
     this.latestStatus = {};
     this.cacheIntervalMs = (config.cacheIntervalSeconds ?? DEFAULT_CACHE_INTERVAL_SECONDS) * 1000;
     this.lastWinixPoll = -1;
