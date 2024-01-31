@@ -35,19 +35,16 @@ export const getSchemaDeviceOverrides = (deviceCount: number): PluginFormSchema 
             deviceId: {
               type: 'string',
               title: 'Device ID',
-              description: 'The ID of the device provided in the Winix app',
               required: true,
             },
             deviceAlias: {
               type: 'string',
               title: 'Device Alias',
-              description: 'The alias of the device provided in the Winix app',
               required: true,
             },
             modelName: {
               type: 'string',
               title: 'Model Name',
-              description: 'The model name of the device',
               required: true,
             },
             serialNumber: {
@@ -95,53 +92,48 @@ export const getSchemaDeviceOverrides = (deviceCount: number): PluginFormSchema 
       {
         type: 'tabarray',
         key: 'deviceOverrides',
+        legend: '{{value.deviceAlias}} ({{value.modelName}})',
         maxItems: deviceCount,
-        items: {
-          type: 'section',
-          title: 'Device Information',
-          description: 'Update device information for each device',
-          legend: '{{value.deviceAlias}} ({{value.modelName}})',
-          removable: false,
-          items: [
-            {
-              key: 'deviceOverrides[].serialNumber',
-              type: 'text',
-              title: 'Serial Number',
-              description: 'The serial number of the device',
-              placeholder: 'WNXAI00000000',
-            },
-            {
-              key: 'deviceOverrides[].nameDevice',
-              type: 'text',
-              title: 'Device Name',
-              description: 'The display name of the device',
-            },
-            {
-              key: 'deviceOverrides[].nameAirQualitySensor',
-              type: 'text',
-              title: 'Air Quality Sensor Name',
-              description: 'The display name of the air quality sensor',
-            },
-            {
-              key: 'deviceOverrides[].nameAmbientLightSensor',
-              type: 'text',
-              title: 'Ambient Light Sensor Name',
-              description: 'The display name of the ambient light sensor',
-            },
-            {
-              key: 'deviceOverrides[].namePlasmawaveSwitch',
-              type: 'text',
-              title: 'Plasmawave Switch Name',
-              description: 'The display name of the Plasmawave switch',
-            },
-            {
-              key: 'deviceOverrides[].nameAutoSwitch',
-              type: 'text',
-              title: 'Auto Switch Name',
-              description: 'The display name of the Auto switch',
-            },
-          ],
-        },
+        removable: false,
+        items: [
+          {
+            key: 'deviceOverrides[].serialNumber',
+            type: 'text',
+            title: 'Serial Number',
+            description: 'The serial number of the device',
+            placeholder: 'WNXAI00000000',
+          },
+          {
+            key: 'deviceOverrides[].nameDevice',
+            type: 'text',
+            title: 'Device Name',
+            description: 'The display name of the device',
+          },
+          {
+            key: 'deviceOverrides[].nameAirQualitySensor',
+            type: 'text',
+            title: 'Air Quality Sensor Name',
+            description: 'The display name of the air quality sensor',
+          },
+          {
+            key: 'deviceOverrides[].nameAmbientLightSensor',
+            type: 'text',
+            title: 'Ambient Light Sensor Name',
+            description: 'The display name of the ambient light sensor',
+          },
+          {
+            key: 'deviceOverrides[].namePlasmawaveSwitch',
+            type: 'text',
+            title: 'Plasmawave Switch Name',
+            description: 'The display name of the Plasmawave switch',
+          },
+          {
+            key: 'deviceOverrides[].nameAutoSwitch',
+            type: 'text',
+            title: 'Auto Switch Name',
+            description: 'The display name of the Auto switch',
+          },
+        ],
       },
     ],
   };
