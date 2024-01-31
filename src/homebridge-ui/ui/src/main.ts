@@ -10,6 +10,7 @@ const $btnNewToken = document.getElementById('btn-winix-new-token')!;
 const $btnDeviceOverrides = document.getElementById('btn-winix-device-overrides')!;
 const $headerLinkAccount = document.getElementById('header-winix-link-account')!;
 const $headerDeviceOverrides = document.getElementById('header-winix-device-overrides')!;
+const $txtAuthIssues = document.getElementById('txt-auth-issues')!;
 
 // Register click handler for the "Link Account" button
 $btnNewToken.addEventListener('click', () => showLoginForm());
@@ -20,9 +21,6 @@ homebridge.showSpinner();
 init();
 
 async function init(): Promise<void> {
-  // Hide initial loading spinner
-  homebridge.hideSpinner();
-
   const [config] = await homebridge.getPluginConfig();
   const hasToken = config?.auth?.refreshToken;
 
@@ -40,11 +38,20 @@ async function showLoginForm(): Promise<void> {
   $headerButtons?.style.setProperty('display', 'none');
   $headerLinkAccount?.style.setProperty('display', 'block');
 
+  const existingAuth = await hasExistingAuth();
+
+  if (existingAuth) {
+    // show the "having issues" text if there is existing auth
+    $txtAuthIssues?.style.setProperty('display', 'block');
+  }
+
+  homebridge.hideSpinner();
+
   const loginForm = homebridge.createForm(
     schemaLogin,
     {},
     'Log In',
-    await hasExistingAuth() ? 'Back' : undefined,
+    existingAuth ? 'Back' : undefined,
   );
 
   loginForm.onSubmit(async ({ email, password }) => {
@@ -53,11 +60,12 @@ async function showLoginForm(): Promise<void> {
     try {
       const auth = await homebridge.request('/login', { email, password });
       await setExistingAuth(auth);
+      homebridge.toast.success('Linked with Winix account', 'Winix Purifiers');
       showConfigForm();
     } catch (e) {
       const error = e as HomebridgeError;
       console.error('error logging in', error.message);
-      homebridge.toast.error(error.message, 'Winix Login Failed');
+      homebridge.toast.error('Login Failed: ' + error.message, 'Winix Purifiers');
     } finally {
       homebridge.hideSpinner();
     }
@@ -80,60 +88,70 @@ async function showDeviceOverridesForm(): Promise<void> {
   } catch (e) {
     const error = e as HomebridgeError;
     console.error('error discovering devices', error.message);
-    homebridge.toast.error(error.message, 'Device Discovery Failed');
+    homebridge.toast.error('Device Discovery Failed: ' + error.message, 'Winix Purifiers');
     homebridge.hideSpinner();
     return;
   }
 
-  homebridge.hideSpinner();
-  $headerDeviceOverrides?.style.setProperty('display', 'block');
+  // Map of deviceId to DeviceOverrideData for discovered Winix devices
+  const discoveredDevices = resp.devices
+    // convert to minimal DeviceOverrideData
+    .map((device: Device): DeviceOverrideData => {
+      return {
+        deviceId: device.deviceId,
+        deviceAlias: device.deviceAlias,
+        modelName: device.modelName,
+      };
+    })
+    // convert to map for easy lookup
+    .reduce((m: Map<string, DeviceOverrideData>, device: DeviceOverrideData) => {
+      return m.set(device.deviceId, device);
+    }, new Map<string, DeviceOverrideData>());
 
-  const data = resp.devices.map((device: Device): DeviceOverrideData => {
-    return {
-      deviceId: device.deviceId,
-      deviceAlias: device.deviceAlias,
-      modelName: device.modelName,
-    };
+  const [config] = await homebridge.getPluginConfig();
+  const existingOverrides = (config?.deviceOverrides ?? []) as DeviceOverride[];
+
+  // merge in any existing overrides from the config
+  existingOverrides.forEach((override) => {
+    const existing = discoveredDevices.get(override.deviceId);
+    if (existing) {
+      discoveredDevices.set(override.deviceId, { ...existing, ...override });
+    }
   });
 
-  // TODO: Fill in rest of data from existing overrides in config
-
-  // const [config] = await homebridge.getPluginConfig();
-  // const deviceOverrides = (config?.deviceOverrides ?? []) as DeviceOverride[];
-  //
-  // if (deviceOverrides.length === 0) {
-  //   homebridge.toast.warning('No device overrides found', 'Winix Device Overrides');
-  //   return;
-  // }
+  const overrides = Array.from(discoveredDevices.values());
 
   $headerButtons?.style.setProperty('display', 'none');
+  $headerDeviceOverrides?.style.setProperty('display', 'block');
+  homebridge.hideSchemaForm();
+  homebridge.hideSpinner();
 
   const form = homebridge.createForm(
-    getSchemaDeviceOverrides(data.length),
-    { deviceOverrides: data },
+    getSchemaDeviceOverrides(overrides.length),
+    { deviceOverrides: overrides },
     'Save All',
-    'Cancel',
+    'Back',
   );
 
-  form.onSubmit(async ({ deviceOverrides }) => {
-    deviceOverrides = deviceOverrides as DeviceOverrideData[];
-    console.log('deviceOverrides', deviceOverrides);
-    const overrides = cleanOverrides(deviceOverrides);
-    console.log('cleaned deviceOverrides', overrides);
+  form.onSubmit(async ({ deviceOverrides }): Promise<void> => {
+    deviceOverrides = cleanOverrides(deviceOverrides as DeviceOverrideData[]);
 
-    // const [config, ...otherConfigs] = await homebridge.getPluginConfig();
-    // await homebridge.updatePluginConfig([{ ...config, deviceOverrides }, ...otherConfigs]);
-    // await homebridge.savePluginConfig();
-    homebridge.toast.success('Device Overrides Updated', 'Winix Device Overrides');
+    const [config, ...otherConfigs] = await homebridge.getPluginConfig();
+    await homebridge.updatePluginConfig([{ ...config, deviceOverrides }, ...otherConfigs]);
+    await homebridge.savePluginConfig();
+    homebridge.toast.success('Device configurations updated successfully', 'Winix Purifiers');
     showConfigForm();
   });
 
   form.onCancel(() => {
-    homebridge.toast.warning('Device Overrides Not Updated', 'Winix Device Overrides');
+    homebridge.toast.warning('Device configurations not updated', 'Winix Purifiers');
     showConfigForm();
   });
 }
 
+/**
+ * Convert a list of DeviceOverrideData to DeviceOverride, removing any empty overrides where no data was entered
+ */
 function cleanOverrides(overrides: DeviceOverrideData[]): DeviceOverride[] {
   return overrides.filter((o) => {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -144,7 +162,11 @@ function cleanOverrides(overrides: DeviceOverrideData[]): DeviceOverride[] {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { deviceId, deviceAlias, modelName, ...otherProperties } = o;
     Object.keys(otherProperties).forEach((key: string) => {
-      if (key in otherProperties && otherProperties[key as keyof typeof otherProperties] === '') {
+      if (!(key in otherProperties)) {
+        return;
+      }
+      const value = otherProperties[key as keyof typeof otherProperties];
+      if (value === undefined || value === '') {
         otherProperties[key as keyof typeof otherProperties] = undefined;
       }
     });
@@ -155,15 +177,16 @@ function cleanOverrides(overrides: DeviceOverrideData[]): DeviceOverride[] {
 function showConfigForm(): void {
   $headerButtons?.style.setProperty('display', 'block');
   $headerLinkAccount?.style.setProperty('display', 'none');
+  $txtAuthIssues?.style.setProperty('display', 'none');
   $headerDeviceOverrides?.style.setProperty('display', 'none');
   homebridge.showSchemaForm();
+  homebridge.hideSpinner();
 }
 
 async function setExistingAuth(auth: WinixExistingAuth): Promise<void> {
   const [config, ...otherConfigs] = await homebridge.getPluginConfig();
   await homebridge.updatePluginConfig([{ ...config, auth }, ...otherConfigs]);
   await homebridge.savePluginConfig();
-  homebridge.toast.success('Linked with Winix account', 'Winix Login Successful');
 }
 
 async function hasExistingAuth(): Promise<boolean> {
