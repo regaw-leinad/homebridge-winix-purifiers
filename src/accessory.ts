@@ -48,8 +48,8 @@ export class WinixPurifierAccessory {
     // Create services
     this.purifier = accessory.getService(this.platform.Service.AirPurifier) ||
       accessory.addService(this.platform.Service.AirPurifier);
-    this.purifier.updateCharacteristic(this.platform.Characteristic.Name, deviceName);
-    this.purifier.updateCharacteristic(this.platform.Characteristic.ConfiguredName, deviceName);
+    this.purifier.setCharacteristic(this.platform.Characteristic.Name, deviceName);
+    this.purifier.setCharacteristic(this.platform.Characteristic.ConfiguredName, deviceName);
     this.servicesInUse.add(this.purifier);
 
     // TODO: Add handler for get/set ConfiguredName
@@ -71,8 +71,10 @@ export class WinixPurifierAccessory {
 
     this.purifierInfo = accessory.getService(this.platform.Service.AccessoryInformation) ||
       accessory.addService(this.platform.Service.AccessoryInformation);
-    this.purifierInfo.updateCharacteristic(this.platform.Characteristic.Manufacturer, 'Winix');
-    this.purifierInfo.updateCharacteristic(this.platform.Characteristic.SerialNumber, deviceSerial);
+    this.purifierInfo.setCharacteristic(this.platform.Characteristic.Name, deviceName);
+    this.purifierInfo.setCharacteristic(this.platform.Characteristic.ConfiguredName, deviceName);
+    this.purifierInfo.setCharacteristic(this.platform.Characteristic.Manufacturer, 'Winix');
+    this.purifierInfo.setCharacteristic(this.platform.Characteristic.SerialNumber, deviceSerial);
     this.purifierInfo.getCharacteristic(this.platform.Characteristic.FirmwareRevision)
       .onGet(() => accessory.context.device.mcuVer);
     this.purifierInfo.getCharacteristic(this.platform.Characteristic.Model)
