@@ -49,6 +49,7 @@ export class WinixPurifierAccessory {
     this.purifier = accessory.getService(this.platform.Service.AirPurifier) ||
       accessory.addService(this.platform.Service.AirPurifier);
     this.purifier.updateCharacteristic(this.platform.Characteristic.Name, deviceName);
+    this.purifier.updateCharacteristic(this.platform.Characteristic.ConfiguredName, deviceName);
     this.servicesInUse.add(this.purifier);
 
     // TODO: Add handler for get/set ConfiguredName
