@@ -2679,10 +2679,10 @@ which@^2.0.1:
   dependencies:
     isexe "^2.0.0"
 
-winix-api@1.4.1:
-  version "1.4.1"
-  resolved "https://registry.yarnpkg.com/winix-api/-/winix-api-1.4.1.tgz#97baac4a055bdcda838f5665f32262f24bb90f1f"
-  integrity sha512-zRC2diecEl8uJZoceMK5D39ug5vR1uo1R3A6Eow+ZwuTNtv/ocQbf6ajzaC/Ufw6ExD2x3VHUUP7sJqJMJSY8g==
+winix-api@1.4.2:
+  version "1.4.2"
+  resolved "https://registry.yarnpkg.com/winix-api/-/winix-api-1.4.2.tgz#7ab951a04162f0ee3f32edc1ca1d1950ae18ed18"
+  integrity sha512-hbZRE0XP8ZmYCDjM4+RmyOgZtjLKOjYaOIxzVnqg6iJ6TZbudx9CaBQ/rvMTBUBFk8YDdd34gX1hQdQny3BFQg==
   dependencies:
     "@aws-sdk/client-cognito-identity-provider" "^3.490.0"
     axios "^1.6.5"
