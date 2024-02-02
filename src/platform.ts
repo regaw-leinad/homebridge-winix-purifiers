@@ -146,8 +146,7 @@ export class WinixPurifierPlatform implements DynamicPlatformPlugin {
 
   configureAccessory(accessory: PlatformAccessory<DeviceContext>): void {
     this.log.debug('Loading cached accessory:', this.logName(accessory.context.device));
-    const deviceOverride = this.deviceOverrides.get(accessory.context.device.deviceId);
-    const handler = new WinixPurifierAccessory(this.log, this, this.config, accessory, deviceOverride);
+    const handler = this.createNewAccessoryHandler(accessory);
     this.accessories.set(accessory.UUID, accessory);
     this.handlers.set(accessory.UUID, handler);
   }
