@@ -1,10 +1,11 @@
 # homebridge-winix-purifiers
 
-[![verified-by-homebridge](https://badgen.net/badge/homebridge/verified/purple)](https://github.com/homebridge/homebridge/wiki/Verified-Plugins)
-[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/regaw-leinad/homebridge-winix-purifiers/build.yml)](https://github.com/regaw-leinad/homebridge-winix-purifiers/actions)
-[![npm](https://img.shields.io/npm/dt/homebridge-winix-purifiers)](https://www.npmjs.com/package/homebridge-winix-purifiers)
+[![verified-by-homebridge](https://img.shields.io/badge/homebridge-verified-blueviolet?color=%23491F59&style=for-the-badge&logoColor=%23FFFFFF&logo=homebridge)](https://github.com/homebridge/homebridge/wiki/Verified-Plugins)
+[![npm](https://img.shields.io/npm/dt/homebridge-winix-purifiers?logo=icloud&style=for-the-badge)](https://www.npmjs.com/package/homebridge-winix-purifiers)
+[![NPM Version](https://img.shields.io/npm/v/homebridge-winix-purifiers?style=for-the-badge)](https://www.npmjs.com/package/homebridge-winix-purifiers)
+[![NPM Version (with dist tag)](https://img.shields.io/npm/v/homebridge-winix-purifiers/beta?style=for-the-badge)](https://www.npmjs.com/package/homebridge-winix-purifiers)
 
-[Homebridge](https://homebridge.io) plugin providing support for [Winix](https://www.winixamerica.com) air purifiers.
+[Homebridge](https://homebridge.io) support for [Winix](https://www.winixamerica.com) air purifiers.
 
 ## Table of Contents
 
