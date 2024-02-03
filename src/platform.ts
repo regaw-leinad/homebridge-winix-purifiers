@@ -13,6 +13,7 @@ import { DeviceOverride, WinixPlatformConfig } from './config';
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
 import { WinixAccount, WinixDevice } from 'winix-api';
 import { WinixPurifierAccessory } from './accessory';
+import { DeviceLogger } from './logger';
 import { assertError } from './errors';
 
 const DEFAULT_DEVICE_REFRESH_INTERVAL_MINUTES = 60;
@@ -22,9 +23,6 @@ export interface DeviceContext extends UnknownContext {
 }
 
 export class WinixPurifierPlatform implements DynamicPlatformPlugin {
-  public readonly Service = this.api.hap.Service;
-  public readonly Characteristic = this.api.hap.Characteristic;
-  public readonly HapStatusError = this.api.hap.HapStatusError;
 
   private readonly config: WinixPlatformConfig;
   private readonly accessories: Map<string, PlatformAccessory<DeviceContext>>;
@@ -100,6 +98,8 @@ export class WinixPurifierPlatform implements DynamicPlatformPlugin {
 
       if (accessory) {
         accessory.context.device = device;
+        const handler = this.createNewAccessoryHandler(accessory);
+        this.handlers.set(uuid, handler);
         this.api.updatePlatformAccessories([accessory]);
       } else {
         accessory = new this.api.platformAccessory(device.deviceAlias, uuid, Categories.AIR_PURIFIER);
@@ -124,7 +124,8 @@ export class WinixPurifierPlatform implements DynamicPlatformPlugin {
     // 🫣 suppress warning message about adding characteristics which aren't required / optional, since it isn't accurate
     this.suppressCharacteristicWarnings(accessory);
     const deviceOverride = this.deviceOverrides.get(accessory.context.device.deviceId);
-    const handler = new WinixPurifierAccessory(this.log, this, this.config, accessory, deviceOverride);
+    const log = new DeviceLogger(this.log, accessory.context.device);
+    const handler = new WinixPurifierAccessory(this.config, accessory, deviceOverride, log);
     this.unsuppressCharacteristicWarnings(accessory);
 
     return handler;
@@ -145,10 +146,7 @@ export class WinixPurifierPlatform implements DynamicPlatformPlugin {
   }
 
   configureAccessory(accessory: PlatformAccessory<DeviceContext>): void {
-    this.log.debug('Loading cached accessory:', this.logName(accessory.context.device));
-    const handler = this.createNewAccessoryHandler(accessory);
     this.accessories.set(accessory.UUID, accessory);
-    this.handlers.set(accessory.UUID, handler);
   }
 
   logName(device: WinixDevice): string {

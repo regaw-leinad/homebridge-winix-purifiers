@@ -938,6 +938,11 @@
     "@smithy/util-buffer-from" "^2.1.1"
     tslib "^2.5.0"
 
+"@types/async-lock@^1.4.2":
+  version "1.4.2"
+  resolved "https://registry.yarnpkg.com/@types/async-lock/-/async-lock-1.4.2.tgz#c2037ba1d6018de766c2505c3abe3b7b6b244ab4"
+  integrity sha512-HlZ6Dcr205BmNhwkdXqrg2vkFMN2PluI7Lgr8In3B3wE5PiQHhjRqtW/lGdVU9gw+sM0JcIDx2AN+cW8oSWIcw==
+
 "@types/json-schema@^7.0.12":
   version "7.0.15"
   resolved "https://registry.yarnpkg.com/@types/json-schema/-/json-schema-7.0.15.tgz#596a1747233694d50f6ad8a7869fcb6f56cf5841"
@@ -1113,6 +1118,11 @@ array-union@^2.1.0:
   version "2.1.0"
   resolved "https://registry.yarnpkg.com/array-union/-/array-union-2.1.0.tgz#b798420adbeb1de828d84acd8a2e23d3efe85e8d"
   integrity sha512-HGyxoOTYUyCM6stUe6EJgnd4EoewAI7zMdfqO+kGjnlZmBDz/cR5pf8r/cR4Wq60sL/p0IkcjUEEPwS3GFrIyw==
+
+async-lock@^1.4.1:
+  version "1.4.1"
+  resolved "https://registry.yarnpkg.com/async-lock/-/async-lock-1.4.1.tgz#56b8718915a9b68b10fce2f2a9a3dddf765ef53f"
+  integrity sha512-Az2ZTpuytrtqENulXwO3GGv1Bztugx6TT37NIo7imr/Qo0gsYiGtSdBa2B6fsXhTpVZDNfu1Qn3pk531e3q+nQ==
 
 asynckit@^0.4.0:
   version "0.4.0"
@@ -2679,10 +2689,10 @@ which@^2.0.1:
   dependencies:
     isexe "^2.0.0"
 
-winix-api@1.4.2:
-  version "1.4.2"
-  resolved "https://registry.yarnpkg.com/winix-api/-/winix-api-1.4.2.tgz#7ab951a04162f0ee3f32edc1ca1d1950ae18ed18"
-  integrity sha512-hbZRE0XP8ZmYCDjM4+RmyOgZtjLKOjYaOIxzVnqg6iJ6TZbudx9CaBQ/rvMTBUBFk8YDdd34gX1hQdQny3BFQg==
+winix-api@1.5.0:
+  version "1.5.0"
+  resolved "https://registry.yarnpkg.com/winix-api/-/winix-api-1.5.0.tgz#f8271ff31b4471b90b05f44e4a5ba9bf914b20d3"
+  integrity sha512-ABlR6RSrKMlkYwpkCvNGZAGpd54Fjaw2UKgvfZ8SOrT+GeVm5KPPVJbeGWJYx+t1fbRSIsiq5muhN7GTmsO6EA==
   dependencies:
     "@aws-sdk/client-cognito-identity-provider" "^3.490.0"
     axios "^1.6.5"
