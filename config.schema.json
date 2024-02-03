@@ -9,25 +9,25 @@
     "properties": {
       "exposeAirQuality": {
         "title": "Air Quality Sensor",
-        "description": "Whether or not to expose the air quality sensors to HomeKit",
+        "description": "Expose the air quality sensor",
         "type": "boolean",
         "default": false
       },
       "exposeAmbientLight": {
         "title": "Ambient Light Sensor",
-        "description": "Whether or not to expose the ambient light sensors to HomeKit",
+        "description": "Expose the ambient light sensor",
         "type": "boolean",
         "default": false
       },
       "exposePlasmawave": {
         "title": "Plasmawave Switch",
-        "description": "Whether or not to expose switches for Plasmawave on/off",
+        "description": "Expose the Plasmawave on/off switch",
         "type": "boolean",
         "default": false
       },
       "exposeAutoSwitch": {
         "title": "Auto Switch",
-        "description": "Whether or not to expose switches for Auto mode on/off",
+        "description": "Expose the auto on/off switch",
         "type": "boolean",
         "default": false
       },

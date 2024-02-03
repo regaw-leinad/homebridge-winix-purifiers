@@ -7,6 +7,11 @@ import { DeviceContext } from './platform';
 import { DeviceLogger } from './logger';
 import { Device } from './device';
 
+/**
+ * The maximum filter life in hours.
+ * Winix only reports the first 6480 hours of usage, then stops counting 😑
+ */
+const MAX_FILTER_HOURS = 6480;
 const DEFAULT_FILTER_LIFE_REPLACEMENT_PERCENTAGE = 10;
 const DEFAULT_CACHE_INTERVAL_SECONDS = 60;
 const MIN_AMBIENT_LIGHT = 0.0001;
@@ -289,39 +294,26 @@ export class WinixPurifierAccessory {
   /**
    * Get the filter life level of the purifier.
    */
-  getFilterLifeLevel(): CharacteristicValue {
-    const { filterMaxPeriod, filterReplaceDate } = this.accessory.context.device;
-    const period = parseInt(filterMaxPeriod, 10);
+  async getFilterLifeLevel(): Promise<CharacteristicValue> {
+    const currentFilterHours = await this.device.getFilterHours();
 
-    if (isNaN(period)) {
-      this.log.debug('getFilterLifeLevel(): device.filterMaxPeriod is not a number:', period);
-      // just assuming 100% life if filterMaxPeriod is not valid
+    if (currentFilterHours <= 0) {
+      this.log.debug('getFilterLifeLevel(): currentFilterHours is not a positive number:', currentFilterHours);
       return 100;
     }
 
-    // Ensure the date is in ISO 8601 format
-    const isoDate = filterReplaceDate.replace(' ', 'T') + 'Z';
-    const replaceDate = new Date(isoDate);
-    const currentDate = new Date();
+    const remainingLife = Math.max(MAX_FILTER_HOURS - currentFilterHours, 0);
+    const remainingPercentage = Math.round((remainingLife / MAX_FILTER_HOURS) * 100);
+    this.log.debug('getFilterLifeLevel()', remainingPercentage);
 
-    // Total lifespan in milliseconds
-    const totalLifespan = new Date(replaceDate);
-    totalLifespan.setMonth(totalLifespan.getMonth() + period);
-
-    const elapsedTime = currentDate.getTime() - replaceDate.getTime();
-    const totalLifespanTime = totalLifespan.getTime() - replaceDate.getTime();
-    const lifeUsed = Math.min(Math.max(elapsedTime / totalLifespanTime, 0), 1);
-    const lifeLevel = Math.round((1 - lifeUsed) * 100);
-
-    this.log.debug('getFilterLifeLevel()', lifeLevel);
-    return lifeLevel;
+    return remainingPercentage;
   }
 
   /**
    * Get the filter change indication of the purifier.
    */
-  getFilterChangeIndication(): CharacteristicValue {
-    const filterLife = this.getFilterLifeLevel() as number;
+  async getFilterChangeIndication(): Promise<CharacteristicValue> {
+    const filterLife = await this.getFilterLifeLevel() as number;
     const replacementPercentage = this.config.filterReplacementIndicatorPercentage ?? DEFAULT_FILTER_LIFE_REPLACEMENT_PERCENTAGE;
     const shouldReplaceFilter = filterLife <= replacementPercentage ?
       Characteristic.FilterChangeIndication.CHANGE_FILTER :
