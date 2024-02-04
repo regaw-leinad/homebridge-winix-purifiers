@@ -116,24 +116,28 @@
               "type": "string",
               "title": "Air Quality Sensor Name",
               "description": "The display name of the air quality sensor",
+              "placeholder": "Air Quality",
               "required": false
             },
             "nameAmbientLightSensor": {
               "type": "string",
               "title": "Ambient Light Sensor Name",
               "description": "The display name of the ambient light sensor",
+              "placeholder": "Ambient Light",
               "required": false
             },
             "namePlasmawaveSwitch": {
               "type": "string",
               "title": "Plasmawave Switch Name",
               "description": "The display name of the Plasmawave switch",
+              "placeholder": "Plasmawave",
               "required": false
             },
             "nameAutoSwitch": {
               "type": "string",
               "title": "Auto Switch Name",
               "description": "The display name of the Auto switch",
+              "placeholder": "Auto Mode",
               "required": false
             }
           }
