@@ -1,9 +1,8 @@
+import { CharacteristicValue, PlatformAccessory, Service } from 'homebridge';
 import { Airflow, AirQuality, Mode, Plasmawave, Power } from 'winix-api';
-import { CharacteristicValue, PlatformAccessory } from 'homebridge';
+import { DeviceContext, WinixPurifierPlatform } from './platform';
 import { DeviceOverride, WinixPlatformConfig } from './config';
 import { CharacteristicManager } from './characteristic';
-import { Characteristic, Service } from 'hap-nodejs';
-import { DeviceContext } from './platform';
 import { DeviceLogger } from './logger';
 import { Device } from './device';
 
@@ -18,6 +17,9 @@ const MIN_AMBIENT_LIGHT = 0.0001;
 
 export class WinixPurifierAccessory {
 
+  private readonly ServiceType = this.platform.Service;
+  private readonly Characteristic = this.platform.Characteristic;
+
   private readonly device: Device;
   private readonly servicesInUse: Set<Service>;
 
@@ -29,6 +31,7 @@ export class WinixPurifierAccessory {
   private readonly autoSwitch?: Service;
 
   constructor(
+    private readonly platform: WinixPurifierPlatform,
     private readonly config: WinixPlatformConfig,
     private readonly accessory: PlatformAccessory<DeviceContext>,
     readonly override: DeviceOverride | undefined,
@@ -47,80 +50,80 @@ export class WinixPurifierAccessory {
     const ambientLightName = override?.nameAmbientLight ?? 'Ambient Light';
     const autoSwitchName = override?.nameAutoSwitch ?? 'Auto Mode';
 
-    const characteristics = new CharacteristicManager(log);
+    const characteristics = new CharacteristicManager(platform, log);
 
     // Create services
-    this.purifier = accessory.getService(Service.AirPurifier) ||
-      accessory.addService(Service.AirPurifier);
+    this.purifier = accessory.getService(this.ServiceType.AirPurifier) ||
+      accessory.addService(this.ServiceType.AirPurifier);
     this.servicesInUse.add(this.purifier);
-    characteristics.set(this.purifier, Characteristic.Name, deviceName);
-    characteristics.set(this.purifier, Characteristic.ConfiguredName, deviceName);
-    characteristics.get(this.purifier, Characteristic.Active)
+    characteristics.set(this.purifier, this.Characteristic.Name, deviceName);
+    characteristics.set(this.purifier, this.Characteristic.ConfiguredName, deviceName);
+    characteristics.get(this.purifier, this.Characteristic.Active)
       .onGet(this.getActiveState.bind(this))
       .onSet(this.setActiveState.bind(this));
-    characteristics.get(this.purifier, Characteristic.CurrentAirPurifierState)
+    characteristics.get(this.purifier, this.Characteristic.CurrentAirPurifierState)
       .onGet(this.getCurrentState.bind(this));
-    characteristics.get(this.purifier, Characteristic.TargetAirPurifierState)
+    characteristics.get(this.purifier, this.Characteristic.TargetAirPurifierState)
       .onGet(this.getTargetState.bind(this))
       .onSet(this.setTargetState.bind(this));
-    characteristics.get(this.purifier, Characteristic.RotationSpeed)
+    characteristics.get(this.purifier, this.Characteristic.RotationSpeed)
       .onGet(this.getRotationSpeed.bind(this))
       .onSet(this.setRotationSpeed.bind(this));
-    characteristics.get(this.purifier, Characteristic.FilterLifeLevel)
+    characteristics.get(this.purifier, this.Characteristic.FilterLifeLevel)
       .onGet(this.getFilterLifeLevel.bind(this));
-    characteristics.get(this.purifier, Characteristic.FilterChangeIndication)
+    characteristics.get(this.purifier, this.Characteristic.FilterChangeIndication)
       .onGet(this.getFilterChangeIndication.bind(this));
 
-    this.purifierInfo = accessory.getService(Service.AccessoryInformation) ||
-      accessory.addService(Service.AccessoryInformation);
+    this.purifierInfo = accessory.getService(this.ServiceType.AccessoryInformation) ||
+      accessory.addService(this.ServiceType.AccessoryInformation);
     this.servicesInUse.add(this.purifierInfo);
-    characteristics.set(this.purifierInfo, Characteristic.Name, deviceName);
-    characteristics.set(this.purifierInfo, Characteristic.ConfiguredName, deviceName);
-    characteristics.set(this.purifierInfo, Characteristic.Manufacturer, 'Winix');
-    characteristics.set(this.purifierInfo, Characteristic.SerialNumber, deviceSerial);
-    characteristics.get(this.purifierInfo, Characteristic.FirmwareRevision)
+    characteristics.set(this.purifierInfo, this.Characteristic.Name, deviceName);
+    characteristics.set(this.purifierInfo, this.Characteristic.ConfiguredName, deviceName);
+    characteristics.set(this.purifierInfo, this.Characteristic.Manufacturer, 'Winix');
+    characteristics.set(this.purifierInfo, this.Characteristic.SerialNumber, deviceSerial);
+    characteristics.get(this.purifierInfo, this.Characteristic.FirmwareRevision)
       .onGet(() => accessory.context.device.mcuVer);
-    characteristics.get(this.purifierInfo, Characteristic.Model)
+    characteristics.get(this.purifierInfo, this.Characteristic.Model)
       .onGet(() => accessory.context.device.modelName);
 
     if (config.exposeAirQuality) {
-      this.airQuality = accessory.getServiceById(Service.AirQualitySensor, 'air-quality-sensor') ||
-        accessory.addService(Service.AirQualitySensor, airQualityName, 'air-quality-sensor');
+      this.airQuality = accessory.getServiceById(this.ServiceType.AirQualitySensor, 'air-quality-sensor') ||
+        accessory.addService(this.ServiceType.AirQualitySensor, airQualityName, 'air-quality-sensor');
       this.servicesInUse.add(this.airQuality);
-      characteristics.set(this.airQuality, Characteristic.Name, airQualityName);
-      characteristics.set(this.airQuality, Characteristic.ConfiguredName, airQualityName);
-      characteristics.get(this.airQuality, Characteristic.AirQuality)
+      characteristics.set(this.airQuality, this.Characteristic.Name, airQualityName);
+      characteristics.set(this.airQuality, this.Characteristic.ConfiguredName, airQualityName);
+      characteristics.get(this.airQuality, this.Characteristic.AirQuality)
         .onGet(this.getAirQuality.bind(this));
     }
 
     if (config.exposePlasmawave) {
-      this.plasmawave = accessory.getServiceById(Service.Switch, 'switch-plasmawave') ||
-        accessory.addService(Service.Switch, plasmawaveName, 'switch-plasmawave');
+      this.plasmawave = accessory.getServiceById(this.ServiceType.Switch, 'switch-plasmawave') ||
+        accessory.addService(this.ServiceType.Switch, plasmawaveName, 'switch-plasmawave');
       this.servicesInUse.add(this.plasmawave);
-      characteristics.set(this.plasmawave, Characteristic.Name, plasmawaveName);
-      characteristics.set(this.plasmawave, Characteristic.ConfiguredName, plasmawaveName);
-      characteristics.get(this.plasmawave, Characteristic.On)
+      characteristics.set(this.plasmawave, this.Characteristic.Name, plasmawaveName);
+      characteristics.set(this.plasmawave, this.Characteristic.ConfiguredName, plasmawaveName);
+      characteristics.get(this.plasmawave, this.Characteristic.On)
         .onGet(this.getPlasmawave.bind(this))
         .onSet(this.setPlasmawave.bind(this));
     }
 
     if (config.exposeAmbientLight) {
-      this.ambientLight = accessory.getServiceById(Service.LightSensor, 'light-sensor-ambient') ||
-        accessory.addService(Service.LightSensor, ambientLightName, 'light-sensor-ambient');
+      this.ambientLight = accessory.getServiceById(this.ServiceType.LightSensor, 'light-sensor-ambient') ||
+        accessory.addService(this.ServiceType.LightSensor, ambientLightName, 'light-sensor-ambient');
       this.servicesInUse.add(this.ambientLight);
-      characteristics.set(this.ambientLight, Characteristic.Name, ambientLightName);
-      characteristics.set(this.ambientLight, Characteristic.ConfiguredName, ambientLightName);
-      characteristics.get(this.ambientLight, Characteristic.CurrentAmbientLightLevel)
+      characteristics.set(this.ambientLight, this.Characteristic.Name, ambientLightName);
+      characteristics.set(this.ambientLight, this.Characteristic.ConfiguredName, ambientLightName);
+      characteristics.get(this.ambientLight, this.Characteristic.CurrentAmbientLightLevel)
         .onGet(this.getAmbientLight.bind(this));
     }
 
     if (config.exposeAutoSwitch) {
-      this.autoSwitch = accessory.getServiceById(Service.Switch, 'switch-auto') ||
-        accessory.addService(Service.Switch, autoSwitchName, 'switch-auto');
+      this.autoSwitch = accessory.getServiceById(this.ServiceType.Switch, 'switch-auto') ||
+        accessory.addService(this.ServiceType.Switch, autoSwitchName, 'switch-auto');
       this.servicesInUse.add(this.autoSwitch);
-      characteristics.set(this.autoSwitch, Characteristic.Name, autoSwitchName);
-      characteristics.set(this.autoSwitch, Characteristic.ConfiguredName, autoSwitchName);
-      characteristics.get(this.autoSwitch, Characteristic.On)
+      characteristics.set(this.autoSwitch, this.Characteristic.Name, autoSwitchName);
+      characteristics.set(this.autoSwitch, this.Characteristic.ConfiguredName, autoSwitchName);
+      characteristics.get(this.autoSwitch, this.Characteristic.On)
         .onGet(this.getAutoSwitchState.bind(this))
         .onSet(this.setAutoSwitchState.bind(this));
     }
@@ -159,7 +162,7 @@ export class WinixPurifierAccessory {
    * This maps to the Power attribute of the Winix device.
    */
   async setActiveState(state: CharacteristicValue) {
-    const power: Power = state === Characteristic.Active.ACTIVE ? Power.On : Power.Off;
+    const power: Power = state === this.Characteristic.Active.ACTIVE ? Power.On : Power.Off;
     this.log.debug(`setActiveState(${state})`, power);
     await this.device.setPower(power);
     await this.sendHomekitUpdate();
@@ -188,7 +191,7 @@ export class WinixPurifierAccessory {
    * Set the target state of the purifier. Either auto or manual mode.
    */
   async setTargetState(state: CharacteristicValue): Promise<void> {
-    const newMode: Mode = state === Characteristic.TargetAirPurifierState.AUTO ? Mode.Auto : Mode.Manual;
+    const newMode: Mode = state === this.Characteristic.TargetAirPurifierState.AUTO ? Mode.Auto : Mode.Manual;
     this.log.debug(`setTargetState(${state})`, newMode);
     await this.device.setMode(newMode);
 
@@ -271,8 +274,8 @@ export class WinixPurifierAccessory {
     const targetState = await this.getTargetState();
 
     // Translate target state (auto/manual mode) to auto switch state
-    const result = targetState === Characteristic.TargetAirPurifierState.AUTO ?
-      Characteristic.Active.ACTIVE : Characteristic.Active.INACTIVE;
+    const result = targetState === this.Characteristic.TargetAirPurifierState.AUTO ?
+      this.Characteristic.Active.ACTIVE : this.Characteristic.Active.INACTIVE;
 
     this.log.debug('getAutoSwitchState()', 'target', targetState, 'result', result);
     return result;
@@ -284,8 +287,8 @@ export class WinixPurifierAccessory {
   async setAutoSwitchState(state: CharacteristicValue): Promise<void> {
     // Translate auto switch state to target state (auto/manual mode)
     const proxyState: CharacteristicValue = state ?
-      Characteristic.TargetAirPurifierState.AUTO :
-      Characteristic.TargetAirPurifierState.MANUAL;
+      this.Characteristic.TargetAirPurifierState.AUTO :
+      this.Characteristic.TargetAirPurifierState.MANUAL;
 
     this.log.debug(`setAutoSwitchState(${state})`, proxyState);
     return this.setTargetState(proxyState);
@@ -316,8 +319,8 @@ export class WinixPurifierAccessory {
     const filterLife = await this.getFilterLifeLevel() as number;
     const replacementPercentage = this.config.filterReplacementIndicatorPercentage ?? DEFAULT_FILTER_LIFE_REPLACEMENT_PERCENTAGE;
     const shouldReplaceFilter = filterLife <= replacementPercentage ?
-      Characteristic.FilterChangeIndication.CHANGE_FILTER :
-      Characteristic.FilterChangeIndication.FILTER_OK;
+      this.Characteristic.FilterChangeIndication.CHANGE_FILTER :
+      this.Characteristic.FilterChangeIndication.FILTER_OK;
 
     this.log.debug(
       'getFilterChangeIndication() filterLife:', filterLife,
@@ -348,27 +351,27 @@ export class WinixPurifierAccessory {
       ambientLight,
     } = await this.device.getState();
 
-    this.purifier.updateCharacteristic(Characteristic.Active, this.toActiveState(power));
-    this.purifier.updateCharacteristic(Characteristic.CurrentAirPurifierState, this.toCurrentState(power));
-    this.purifier.updateCharacteristic(Characteristic.TargetAirPurifierState, this.toTargetState(mode));
-    this.purifier.updateCharacteristic(Characteristic.RotationSpeed, this.toRotationSpeed(airflow));
+    this.purifier.updateCharacteristic(this.Characteristic.Active, this.toActiveState(power));
+    this.purifier.updateCharacteristic(this.Characteristic.CurrentAirPurifierState, this.toCurrentState(power));
+    this.purifier.updateCharacteristic(this.Characteristic.TargetAirPurifierState, this.toTargetState(mode));
+    this.purifier.updateCharacteristic(this.Characteristic.RotationSpeed, this.toRotationSpeed(airflow));
 
     if (this.airQuality !== undefined) {
-      this.airQuality?.updateCharacteristic(Characteristic.AirQuality, this.toAirQuality(airQuality));
+      this.airQuality?.updateCharacteristic(this.Characteristic.AirQuality, this.toAirQuality(airQuality));
     }
 
     if (this.plasmawave !== undefined) {
-      this.plasmawave?.updateCharacteristic(Characteristic.On, this.toSwitch(plasmawave));
+      this.plasmawave?.updateCharacteristic(this.Characteristic.On, this.toSwitch(plasmawave));
     }
 
     if (this.ambientLight !== undefined) {
-      this.ambientLight?.updateCharacteristic(Characteristic.CurrentAmbientLightLevel, ambientLight);
+      this.ambientLight?.updateCharacteristic(this.Characteristic.CurrentAmbientLightLevel, ambientLight);
     }
 
     if (this.autoSwitch !== undefined) {
       this.autoSwitch?.updateCharacteristic(
-        Characteristic.On,
-        this.toTargetState(mode) === Characteristic.TargetAirPurifierState.AUTO,
+        this.Characteristic.On,
+        this.toTargetState(mode) === this.Characteristic.TargetAirPurifierState.AUTO,
       );
     }
   }
@@ -376,27 +379,27 @@ export class WinixPurifierAccessory {
   private toActiveState(power: Power): CharacteristicValue {
     switch (power) {
       case Power.On:
-        return Characteristic.Active.ACTIVE;
+        return this.Characteristic.Active.ACTIVE;
       case Power.Off:
-        return Characteristic.Active.INACTIVE;
+        return this.Characteristic.Active.INACTIVE;
     }
   }
 
   private toCurrentState(power: Power): CharacteristicValue {
     switch (power) {
       case Power.On:
-        return Characteristic.CurrentAirPurifierState.PURIFYING_AIR;
+        return this.Characteristic.CurrentAirPurifierState.PURIFYING_AIR;
       case Power.Off:
-        return Characteristic.CurrentAirPurifierState.INACTIVE;
+        return this.Characteristic.CurrentAirPurifierState.INACTIVE;
     }
   }
 
   private toTargetState(mode: Mode): CharacteristicValue {
     switch (mode) {
       case Mode.Auto:
-        return Characteristic.TargetAirPurifierState.AUTO;
+        return this.Characteristic.TargetAirPurifierState.AUTO;
       case Mode.Manual:
-        return Characteristic.TargetAirPurifierState.MANUAL;
+        return this.Characteristic.TargetAirPurifierState.MANUAL;
     }
   }
 
@@ -439,13 +442,13 @@ export class WinixPurifierAccessory {
   private toAirQuality(airQuality: AirQuality): CharacteristicValue {
     switch (airQuality) {
       case AirQuality.Good:
-        return Characteristic.AirQuality.GOOD;
+        return this.Characteristic.AirQuality.GOOD;
       case AirQuality.Fair:
-        return Characteristic.AirQuality.FAIR;
+        return this.Characteristic.AirQuality.FAIR;
       case AirQuality.Poor:
-        return Characteristic.AirQuality.POOR;
+        return this.Characteristic.AirQuality.POOR;
       default:
-        return Characteristic.AirQuality.UNKNOWN;
+        return this.Characteristic.AirQuality.UNKNOWN;
     }
   }
 

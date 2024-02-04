@@ -7,7 +7,7 @@ import {
   Service,
   WithUUID,
 } from 'homebridge';
-import { CharacteristicContext, HAPConnection, HapStatusError } from 'hap-nodejs';
+import { WinixPurifierPlatform } from './platform';
 import { DeviceLogger } from './logger';
 import { assertError } from './errors';
 
@@ -18,12 +18,15 @@ export type CharacteristicType = WithUUID<{ new(): Characteristic }>;
  */
 export class CharacteristicManager {
 
-  constructor(private readonly log: DeviceLogger) {
+  constructor(
+    private readonly platform: WinixPurifierPlatform,
+    private readonly log: DeviceLogger,
+  ) {
   }
 
   get(service: Service, characteristic: CharacteristicType): CharacteristicWrapper {
     const c: Characteristic = service.getCharacteristic(characteristic);
-    return new CharacteristicWrapper(this.log, c);
+    return new CharacteristicWrapper(this.platform, this.log, c);
   }
 
   set(service: Service, name: CharacteristicType, value: CharacteristicValue): Service {
@@ -37,7 +40,11 @@ export class CharacteristicManager {
  */
 export class CharacteristicWrapper {
 
-  constructor(private readonly log: DeviceLogger, private readonly characteristic: Characteristic) {
+  constructor(
+    private readonly platform: WinixPurifierPlatform,
+    private readonly log: DeviceLogger,
+    private readonly characteristic: Characteristic,
+  ) {
   }
 
   onGet(handler: CharacteristicGetHandler): CharacteristicWrapper {
@@ -54,8 +61,8 @@ export class CharacteristicWrapper {
    * Wrap a get handler to handle errors and logging
    */
   private wrapGet(fn: CharacteristicGetHandler): CharacteristicGetHandler {
-    return async (context: CharacteristicContext, connection?: HAPConnection) => {
-      return this.wrap(async () => await fn(context, connection));
+    return async (context: unknown) => {
+      return this.wrap(async () => await fn(context));
     };
   }
 
@@ -63,8 +70,8 @@ export class CharacteristicWrapper {
    * Wrap a set handler to handle errors and logging
    */
   private wrapSet(fn: CharacteristicSetHandler): CharacteristicSetHandler {
-    return async (value: CharacteristicValue, context: CharacteristicContext, connection?: HAPConnection) => {
-      return this.wrap(async () => await fn(value, context, connection));
+    return async (value: CharacteristicValue, context: unknown) => {
+      return this.wrap(async () => await fn(value, context));
     };
   }
 
@@ -77,7 +84,7 @@ export class CharacteristicWrapper {
     } catch (e) {
       assertError(e);
       this.log.error('error calling Winix API:', e.message);
-      throw new HapStatusError(HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+      throw new this.platform.HapStatusError(HAPStatus.SERVICE_COMMUNICATION_FAILURE);
     }
   }
 }

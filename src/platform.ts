@@ -24,6 +24,10 @@ export interface DeviceContext extends UnknownContext {
 
 export class WinixPurifierPlatform implements DynamicPlatformPlugin {
 
+  public readonly Service = this.api.hap.Service;
+  public readonly Characteristic = this.api.hap.Characteristic;
+  public readonly HapStatusError = this.api.hap.HapStatusError;
+
   private readonly config: WinixPlatformConfig;
   private readonly accessories: Map<string, PlatformAccessory<DeviceContext>>;
   private readonly handlers: Map<string, WinixPurifierAccessory>;
@@ -125,7 +129,7 @@ export class WinixPurifierPlatform implements DynamicPlatformPlugin {
     this.suppressCharacteristicWarnings(accessory);
     const deviceOverride = this.deviceOverrides.get(accessory.context.device.deviceId);
     const log = new DeviceLogger(this.log, accessory.context.device);
-    const handler = new WinixPurifierAccessory(this.config, accessory, deviceOverride, log);
+    const handler = new WinixPurifierAccessory(this, this.config, accessory, deviceOverride, log);
     this.unsuppressCharacteristicWarnings(accessory);
 
     return handler;
