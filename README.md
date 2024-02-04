@@ -49,8 +49,8 @@ Winix's system limits users to a single active session per account. When the sam
 Winix app and Homebridge, it can lead to being logged out from one of the sessions. An alternate account dedicated to
 Homebridge prevents this issue, ensuring stable operation without frequent authentication disruptions.
 
-_**Yes, this is an annoying and tedious process, but it is well worth not having to continually fix authentication
-issues.**_
+_**Yes, this is an annoying and tedious one-time setup, but it is well worth not having to continually fix
+authentication issues.**_
 
 To create and link an alternate Winix account, please follow the instructions in the
 [Alternate Winix Account: Creating and Linking](https://github.com/regaw-leinad/homebridge-winix-purifiers/wiki/Alternate-Winix-Account:-Creating-and-Linking)
