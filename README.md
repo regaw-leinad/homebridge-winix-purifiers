@@ -83,10 +83,24 @@ While not recommended, if manual setup is required, add the following to the `pl
         "userId": "f470ce5f-6b8e-44b4-a6db-b7f4d4c6f851",
         "refreshToken": "<refresh token>"
       },
+      "deviceOverrides": [
+        {
+          "deviceId": "123ABC456DEF_abc123xyz",
+          "serialNumber": "WNXAI12345678",
+          "nameDevice": "Living Room Air Purifier"
+        },
+        {
+          "deviceId": "789XYZ987VWX_xyz789abc",
+          "serialNumber": "WNXAI87654321",
+          "nameDevice": "Bedroom Air Purifier",
+          "nameAutoSwitch": "My Auto Switch"
+        }
+      ],
       "platform": "WinixPurifiers"
     }
   ]
 }
+
 ```
 
 #### Properties
