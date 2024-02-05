@@ -1,0 +1,57 @@
+<div id="header-winix-buttons" class="container-fluid" style="display: none;">
+    <div class="row">
+        <!-- Left-aligned button -->
+        <div class="col">
+            <div class="row">
+                <button id="btn-winix-new-token" class="btn btn-primary">
+                    <i class="fa fa-redo mr-1"></i>
+                    Reauthenticate with Winix
+                </button>
+            </div>
+        </div>
+
+        <!-- Right-aligned button -->
+        <div class="col text-right pr-0">
+            <button id="btn-winix-device-overrides" class="btn btn-primary">
+                Configure Devices
+                <i class="fa-solid fa-arrow-right ml-1"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+
+<div id="header-winix-link-account" class="container" style="display: none;">
+    <div class="row justify-content-center">
+        <h4 class="primary-text mb-3">
+            Link Winix Account
+        </h4>
+    </div>
+    <div id="txt-auth-issues" class="row text-center mb-2" style="display: none;">
+        <span>
+            <span class="font-weight-bold">Having auth issues? Re-link your Winix account with Homebridge</span>
+        </span>
+    </div>
+    <div class="row text-center">
+        <span>
+            Logging in with your main Winix account?
+            It's recommended to create an alternate Winix account for Homebridge.
+            Read about it in the
+            <a href="https://github.com/regaw-leinad/homebridge-winix-purifiers/wiki/Alternate-Winix-Account:-Creating-and-Linking"
+               target="_blank" rel="noopener noreferrer">Wiki</a><i class="fa fa-external-link ml-1"></i>
+        </span>
+    </div>
+</div>
+
+<div id="header-winix-device-overrides" class="container" style="display: none;">
+    <div class="row justify-content-center">
+        <h4 class="primary-text mb-3">
+            Device Configuration
+        </h4>
+    </div>
+    <div class="row justify-content-center">
+        <span>Only devices connected to your Winix account will be displayed below</span>
+    </div>
+</div>
+
+<script type="module" src="./src/main.ts"></script>

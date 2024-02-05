@@ -2,7 +2,7 @@
   "private": false,
   "displayName": "Winix Air Purifiers",
   "name": "homebridge-winix-purifiers",
-  "version": "1.4.4",
+  "version": "2.0.0-beta.6",
   "description": "Homebridge plugin for Winix air purifiers",
   "license": "Apache-2.0",
   "repository": {
@@ -13,8 +13,8 @@
     "url": "https://github.com/regaw-leinad/homebridge-winix-purifiers/issues"
   },
   "engines": {
-    "node": ">=14.18.1",
-    "homebridge": ">=1.3.5"
+    "node": "^18 || ^20",
+    "homebridge": ">=1.7.0"
   },
   "main": "dist/index.js",
   "files": [
@@ -22,13 +22,21 @@
     "config.schema.json"
   ],
   "scripts": {
-    "lint": "eslint src/**.ts --max-warnings=0",
-    "watch": "npm run build && npm link && nodemon",
-    "build": "rimraf ./dist && tsc",
-    "validate": "npm run lint && npm run build",
-    "prepublishOnly": "npm run validate",
-    "version": "npm run validate",
-    "postversion": "git push && git push --tags && rimraf ./dist"
+    "build": "yarn clean && yarn build:ui && yarn build:server && cp -R ./src/homebridge-ui/ui/dist ./dist/homebridge-ui/public",
+    "build:server": "tsc",
+    "build:ui": "yarn --cwd ./src/homebridge-ui/ui build",
+    "ci": "yarn ci:server && yarn ci:ui",
+    "ci:server": "yarn --frozen-lockfile",
+    "ci:ui": "yarn --cwd ./src/homebridge-ui/ui --frozen-lockfile",
+    "clean": "rm -rf ./dist && rm -rf ./src/homebridge-ui/ui/dist",
+    "install:ui": "yarn --cwd ./src/homebridge-ui/ui",
+    "lint": "yarn lint:server && yarn lint:ui",
+    "lint:server": "eslint ./src/**.ts --max-warnings=0",
+    "lint:ui": "eslint ./src/homebridge-ui/**/**.ts --max-warnings=0",
+    "postversion": "git push && git push --tags && yarn clean",
+    "prepublishOnly": "yarn validate",
+    "validate": "yarn lint && yarn build",
+    "version": "yarn validate"
   },
   "keywords": [
     "homebridge-plugin",
@@ -41,16 +49,18 @@
     "winix air purifier"
   ],
   "dependencies": {
-    "winix-api": "1.1.2"
+    "@homebridge/plugin-ui-utils": "^1.0.1",
+    "async-lock": "^1.4.1",
+    "winix-api": "1.5.0"
   },
   "devDependencies": {
-    "@types/node": "^18.11.0",
-    "@typescript-eslint/eslint-plugin": "^5.0.0",
-    "@typescript-eslint/parser": "^5.0.0",
+    "@types/async-lock": "^1.4.2",
+    "@types/node": "^20.11.0",
+    "@typescript-eslint/eslint-plugin": "^6.18.1",
+    "@typescript-eslint/parser": "^6.18.1",
     "eslint": "^8.0.1",
     "homebridge": "^1.7.0",
-    "nodemon": "^2.0.13",
-    "rimraf": "^3.0.2",
-    "typescript": "^4.4.4"
+    "nodemon": "^3.0.2",
+    "typescript": "^5.3.3"
   }
 }
