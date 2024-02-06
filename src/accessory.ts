@@ -264,7 +264,7 @@ export class WinixPurifierAccessory {
     // Fix ambient light value under 0.0001 warning
     const fixedAmbientLight = Math.max(ambientLight, MIN_AMBIENT_LIGHT);
     this.log.debug('getAmbientLight():', 'measured:', ambientLight, 'fixed:', fixedAmbientLight);
-    return ambientLight;
+    return fixedAmbientLight;
   }
 
   /**
