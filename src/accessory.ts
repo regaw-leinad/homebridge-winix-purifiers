@@ -518,10 +518,8 @@ export class WinixPurifierAccessory {
     let timeoutId: NodeJS.Timeout | null = null;
     return async (arg: CharacteristicValue) => {
       if (timeoutId) {
-        this.log.debug('debounce:clearing timeout');
         clearTimeout(timeoutId);
       }
-      this.log.debug('debounce:setting timeout');
       timeoutId = setTimeout(async () => await func(arg), delay);
     };
   }
