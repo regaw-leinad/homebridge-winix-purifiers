@@ -287,9 +287,7 @@ export class WinixPurifierAccessory {
     const targetState = await this.getTargetState();
 
     // Translate target state (auto/manual mode) to auto switch state
-    const result = targetState === this.Characteristic.TargetAirPurifierState.AUTO ?
-      this.Characteristic.Active.ACTIVE : this.Characteristic.Active.INACTIVE;
-
+    const result = targetState === this.Characteristic.TargetAirPurifierState.AUTO;
     this.log.debug('accessory:getAutoSwitchState()', 'target', targetState, 'result', result);
     return result;
   }
