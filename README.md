@@ -24,8 +24,9 @@
 ## Features
 
 - **Dynamic Device Discovery**: Automatically discovers and configures Winix purifiers linked to your account.
-- **Control**: Power on/off, switch between auto/manual modes, and adjust airflow speed.
-- **Customization**: Optionally expose Air Quality, Ambient Light, Plasmawave, and Auto Mode switches to HomeKit.
+- **Control**: Power on/off, switch between sleep/auto/manual modes, and adjust airflow speed.
+- **Customization**: Optionally expose Air Quality, Ambient Light, Plasmawave, Auto Mode, and Sleep Mode switches to
+  HomeKit.
 - **Filter Management**: Exposes the remaining filter life and provides an alert when it's time to change the filter,
   configurable to trigger at a specified percentage of remaining filter life.
 - **Efficiency**: Features Winix API response caching to minimize requests and avoid rate limiting.
@@ -75,6 +76,7 @@ While not recommended, if manual setup is required, add the following to the `pl
       "exposeAmbientLight": true,
       "exposePlasmawave": false,
       "exposeAutoSwitch": false,
+      "exposeSleepSwitch": false,
       "filterReplacementIndicatorPercentage": 10,
       "cacheIntervalSeconds": 300,
       "deviceRefreshIntervalMinutes": 60,
@@ -111,6 +113,7 @@ While not recommended, if manual setup is required, add the following to the `pl
 | `exposeAmbientLight`                       | `false`            | Whether to expose the ambient light sensors to HomeKit.                                                            |
 | `exposePlasmawave`                         | `false`            | Whether to expose switches for Plasmawave on/off.                                                                  |
 | `exposeAutoSwitch`                         | `false`            | Whether to expose switches for Auto mode on/off.                                                                   |
+| `exposeSleepSwitch`                        | `false`            | Whether to expose switches for Sleep mode on/off.                                                                  |
 | `filterReplacementIndicatorPercentage`     | `10`               | Percentage of filter life remaining to trigger a filter replacement alert.                                         |
 | `cacheIntervalSeconds`                     | `60`               | Time, in seconds, for how long to reuse cached responses from Winix.                                               |
 | `deviceRefreshIntervalMinutes`             | `60`               | Time, in minutes, for how often to poll Winix to refresh the device list.                                          |
@@ -124,6 +127,7 @@ While not recommended, if manual setup is required, add the following to the `pl
 | `deviceOverrides[].nameAmbientLightSensor` | `"Ambient Light"`  | The display name of the ambient light sensor. Optional.                                                            |
 | `deviceOverrides[].namePlasmawaveSwitch`   | `"Plasmawave"`     | The display name of the Plasmawave switch. Optional.                                                               |
 | `deviceOverrides[].nameAutoSwitch`         | `"Auto Mode"`      | The display name of the Auto switch. Optional.                                                                     |
+| `deviceOverrides[].nameSleepSwitch`        | `"Sleep"`          | The display name of the Sleep switch. Optional.                                                                    |
 | `platform`                                 | `"WinixPurifiers"` | Must always be `"WinixPurifiers"` in order for the plugin to load this config.                                     |
 
 ## FAQ

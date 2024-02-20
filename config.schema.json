@@ -27,7 +27,13 @@
       },
       "exposeAutoSwitch": {
         "title": "Auto Switch",
-        "description": "Expose the auto on/off switch",
+        "description": "Expose the Auto on/off switch",
+        "type": "boolean",
+        "default": false
+      },
+      "exposeSleepSwitch": {
+        "title": "Sleep Switch",
+        "description": "Expose the Sleep on/off switch",
         "type": "boolean",
         "default": false
       },
@@ -158,6 +164,7 @@
         "exposeAmbientLight",
         "exposePlasmawave",
         "exposeAutoSwitch",
+        "exposeSleepSwitch",
         "filterReplacementIndicatorPercentage",
         "cacheIntervalSeconds",
         "deviceRefreshIntervalMinutes"

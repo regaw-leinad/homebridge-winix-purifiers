@@ -16,6 +16,7 @@ export interface WinixPlatformConfig {
   exposeAmbientLight?: boolean;
   exposePlasmawave?: boolean;
   exposeAutoSwitch?: boolean;
+  exposeSleepSwitch?: boolean;
   filterReplacementIndicatorPercentage?: number;
   cacheIntervalSeconds?: number;
   deviceRefreshIntervalMinutes?: number;

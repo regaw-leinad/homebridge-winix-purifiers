@@ -70,11 +70,11 @@ export class Device {
   async setPower(value: Power): Promise<void> {
     const initialPower = await this.getPower();
     if (initialPower === value) {
-      this.log.debug('setPower(%s)', value, '(no change)');
+      this.log.debug('device:setPower(%s)', value, '(no change)');
       return;
     }
 
-    this.log.debug('setPower()', initialPower, value);
+    this.log.debug('device:setPower()', initialPower, value);
     await WinixAPI.setPower(this.deviceId, value);
     this.state.power = value;
 
@@ -90,11 +90,11 @@ export class Device {
     // Don't try to set the mode if it's already set to the same value
     // Fixes issues with this being set right around the time of power on
     if (!turnedOn && value === await this.getMode()) {
-      this.log.debug('setMode(%s)', value, '(no change)');
+      this.log.debug('device:setMode(%s)', value, '(no change)');
       return;
     }
 
-    this.log.debug('setMode(%s)', value);
+    this.log.debug('device:setMode(%s)', value);
     await WinixAPI.setMode(this.deviceId, value);
     this.state.mode = value;
     // default to low airflow when switching modes
@@ -102,7 +102,7 @@ export class Device {
   }
 
   async setAirflow(value: Airflow): Promise<void> {
-    this.log.debug('setAirflow(%s)', value);
+    this.log.debug('device:setAirflow(%s)', value);
     // Device must be on and in manual mode to set airflow
     await this.ensureOn();
     await this.setMode(Mode.Manual);
@@ -111,7 +111,7 @@ export class Device {
   }
 
   async setPlasmawave(value: Plasmawave): Promise<void> {
-    this.log.debug('setPlasmawave()', value);
+    this.log.debug('device:setPlasmawave()', value);
     await this.ensureOn();
     await WinixAPI.setPlasmawave(this.deviceId, value);
     this.state.plasmawave = value;
@@ -131,9 +131,9 @@ export class Device {
   }
 
   async update(): Promise<void> {
-    this.log.debug('update()');
+    this.log.debug('device:update()');
     this.state = await WinixAPI.getDeviceStatus(this.deviceId);
-    this.log.debug('update()', JSON.stringify(this.state));
+    this.log.debug('device:update()', JSON.stringify(this.state));
     this.lastWinixPoll = Date.now();
   }
 
@@ -152,11 +152,11 @@ export class Device {
 
   private async ensureOn(): Promise<boolean> {
     if (await this.getPower() === Power.On) {
-      this.log.debug('ensureOn()', 'already on');
+      this.log.debug('device:ensureOn()', 'already on');
       return false;
     }
 
-    this.log.debug('ensureOn()');
+    this.log.debug('device:ensureOn()');
     await this.setPower(Power.On);
     return true;
   }
