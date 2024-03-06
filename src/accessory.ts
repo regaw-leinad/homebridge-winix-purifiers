@@ -275,7 +275,7 @@ export class WinixPurifierAccessory {
   async getAmbientLight(): Promise<CharacteristicValue> {
     const ambientLight = await this.device.getAmbientLight();
     // Fix ambient light value under 0.0001 warning
-    const fixedAmbientLight = Math.max(ambientLight, MIN_AMBIENT_LIGHT);
+    const fixedAmbientLight = this.toAmbientLight(ambientLight);
     this.log.debug('accessory:getAmbientLight():', 'measured:', ambientLight, 'fixed:', fixedAmbientLight);
     return fixedAmbientLight;
   }
@@ -405,7 +405,7 @@ export class WinixPurifierAccessory {
     }
 
     if (this.ambientLight !== undefined) {
-      this.ambientLight?.updateCharacteristic(this.Characteristic.CurrentAmbientLightLevel, ambientLight);
+      this.ambientLight?.updateCharacteristic(this.Characteristic.CurrentAmbientLightLevel, this.toAmbientLight(ambientLight));
     }
 
     if (this.autoSwitch !== undefined) {
@@ -510,6 +510,10 @@ export class WinixPurifierAccessory {
 
   private toPlasmawave(state: CharacteristicValue): Plasmawave {
     return state ? Plasmawave.On : Plasmawave.Off;
+  }
+
+  private toAmbientLight(ambientLight: number) {
+    return Math.max(ambientLight, MIN_AMBIENT_LIGHT);
   }
 
   private debounce(func: (arg: CharacteristicValue) => Promise<void>, delay: number): (arg: CharacteristicValue) => Promise<void> {
