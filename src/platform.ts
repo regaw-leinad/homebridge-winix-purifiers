@@ -52,6 +52,12 @@ export class WinixPurifierPlatform implements DynamicPlatformPlugin {
   }
 
   async onFinishLaunching(): Promise<void> {
+    if (this.config.doCacheWinix && this.config.doUpdateDeviceState) {
+      this.log.error('doCacheWinix and doUpdateDeviceState cannot both be true. ' +
+        'Please set one or the other to true, or both to false in the Homebridge UI.');
+      return;
+    }
+
     if (!this.config.auth) {
       this.notConfigured();
       return;

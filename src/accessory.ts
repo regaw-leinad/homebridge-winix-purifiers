@@ -1,10 +1,10 @@
 import { CharacteristicValue, PlatformAccessory, Service } from 'homebridge';
 import { Airflow, AirQuality, Mode, Plasmawave, Power } from 'winix-api';
+import { CachedDevice, Device, UpdateIntervalDevice } from './device';
 import { DeviceContext, WinixPurifierPlatform } from './platform';
 import { DeviceOverride, WinixPlatformConfig } from './config';
 import { CharacteristicManager } from './characteristic';
 import { DeviceLogger } from './logger';
-import { Device } from './device';
 
 /**
  * The maximum filter life in hours.
@@ -13,6 +13,7 @@ import { Device } from './device';
 const MAX_FILTER_HOURS = 6480;
 const DEFAULT_FILTER_LIFE_REPLACEMENT_PERCENTAGE = 10;
 const DEFAULT_CACHE_INTERVAL_SECONDS = 60;
+const DEFAULT_UPDATE_INTERVAL_SECONDS = 60;
 const MIN_AMBIENT_LIGHT = 0.0001;
 
 export class WinixPurifierAccessory {
@@ -40,8 +41,18 @@ export class WinixPurifierAccessory {
   ) {
     const { deviceId, deviceAlias } = accessory.context.device;
 
-    const cacheIntervalMs = (config.cacheIntervalSeconds ?? DEFAULT_CACHE_INTERVAL_SECONDS) * 1000;
-    this.device = new Device(deviceId, cacheIntervalMs, this.log);
+    // We'll use a cached client if doCacheWinix is true, or if both doCacheWinix and doUpdateDeviceState are false
+    const cacheClient = config.doCacheWinix || !config.doUpdateDeviceState;
+
+    // Figure out if we're using a cached client or an interval-updating client
+    if (cacheClient) {
+      const cacheIntervalMs = (config.cacheIntervalSeconds ?? DEFAULT_CACHE_INTERVAL_SECONDS) * 1000;
+      this.device = new CachedDevice(deviceId, this.log, cacheIntervalMs);
+    } else {
+      const updateIntervalMs = (config.updateIntervalSeconds ?? DEFAULT_UPDATE_INTERVAL_SECONDS) * 1000;
+      this.device = new UpdateIntervalDevice(deviceId, this.log, updateIntervalMs);
+    }
+
     this.servicesInUse = new Set<Service>();
 
     const deviceSerial = override?.serialNumber ?? 'WNXAI00000000';
@@ -364,11 +375,7 @@ export class WinixPurifierAccessory {
 
   private scheduleHomekitUpdate() {
     this.log.debug('scheduling homekit update');
-
-    setTimeout(async () => {
-      await this.device.update();
-      await this.sendHomekitUpdate();
-    }, 1000);
+    setTimeout(async () => await this.device.update(), 1000);
   }
 
   /**

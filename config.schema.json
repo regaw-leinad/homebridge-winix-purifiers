@@ -46,12 +46,26 @@
         "maximum": 100,
         "required": true
       },
+      "doCacheWinix": {
+        "title": "Cache Winix Responses",
+        "description": "Cache Winix responses to reduce the number of requests to the Winix API",
+        "type": "boolean",
+        "default": true,
+        "required": true
+      },
       "cacheIntervalSeconds": {
         "title": "Winix Response Cache Interval (seconds)",
         "description": "Time, in seconds, for how long to reuse cached responses from Winix",
         "type": "integer",
         "default": 60,
         "minimum": 0,
+        "required": true
+      },
+      "doUpdateIntervalDeviceState": {
+        "title": "Update Device State Interval",
+        "description": "Update the device state at a regular interval",
+        "type": "boolean",
+        "default": true,
         "required": true
       },
       "deviceRefreshIntervalMinutes": {
