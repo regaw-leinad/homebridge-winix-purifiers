@@ -50,8 +50,14 @@ export class WinixPurifierPlatform implements DynamicPlatformPlugin {
 
   async onFinishLaunching(): Promise<void> {
     if (!this.config.auth?.refreshToken) {
-      this.log.warn('Winix Purifiers is NOT set up. ' +
+      this.log.error('Winix Purifiers is NOT set up. ' +
         'Please link your Winix account in the Homebridge UI.');
+      return;
+    }
+
+    if (this.config.doCacheWinix && this.config.doUpdateDeviceState) {
+      this.log.error('doCacheWinix and doUpdateDeviceState cannot both be true. ' +
+        'Please set one or the other to true, or both to false in the Homebridge UI.');
       return;
     }
 
@@ -83,13 +89,13 @@ export class WinixPurifierPlatform implements DynamicPlatformPlugin {
 
     // if devices is explicitly typeof undefined, then the user has not logged in yet
     if (typeof devices === 'undefined') {
-      this.log.warn('Winix Purifiers is NOT set up. ' +
+      this.log.error('Winix Purifiers is NOT set up. ' +
         'Please log in with your Winix account credentials in the Homebridge UI.');
       return;
     }
 
     if (devices.length === 0) {
-      this.log.warn('No Winix devices found. Please add devices to your Winix account.');
+      this.log.error('No Winix devices found. Please add devices to your Winix account.');
     }
 
     const accessoriesToAdd: PlatformAccessory<DeviceContext>[] = [];

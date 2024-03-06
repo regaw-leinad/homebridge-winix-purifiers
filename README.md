@@ -79,6 +79,7 @@ While not recommended, if manual setup is required, add the following to the `pl
       "exposeSleepSwitch": false,
       "filterReplacementIndicatorPercentage": 10,
       "cacheIntervalSeconds": 300,
+      "updateIntervalSeconds": 300,
       "deviceRefreshIntervalMinutes": 60,
       "auth": {
         "username": "your-email@domain.com",
@@ -116,6 +117,7 @@ While not recommended, if manual setup is required, add the following to the `pl
 | `exposeSleepSwitch`                        | `false`            | Whether to expose switches for Sleep mode on/off.                                                                  |
 | `filterReplacementIndicatorPercentage`     | `10`               | Percentage of filter life remaining to trigger a filter replacement alert.                                         |
 | `cacheIntervalSeconds`                     | `60`               | Time, in seconds, for how long to reuse cached responses from Winix.                                               |
+| `updateIntervalSeconds`                    | `60`               | Time, in seconds, for how often to poll Winix to update device state.                                              |
 | `deviceRefreshIntervalMinutes`             | `60`               | Time, in minutes, for how often to poll Winix to refresh the device list.                                          |
 | `auth.username`                            | `""`               | Your Winix account username (email). This field is meant to be read-only after being generated in the UI.          |
 | `auth.userId`                              | `""`               | Your Winix user ID for the Cognito User Pool. This field is meant to be read-only after being generated in the UI. |

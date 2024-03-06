@@ -5,18 +5,18 @@ import AsyncLock from 'async-lock';
 export interface DeviceState extends DeviceStatus {
 }
 
-export class Device {
+/**
+ * Abstract class for interacting with a Winix device
+ */
+export abstract class Device {
 
-  private readonly lock: AsyncLock;
-  private state: DeviceState;
-  private lastWinixPoll = -1;
+  protected state: DeviceState;
+  protected lastWinixPoll = -1;
 
-  constructor(
-    private readonly deviceId: string,
-    private readonly cacheIntervalMs: number,
-    private readonly log: DeviceLogger,
+  protected constructor(
+    protected readonly deviceId: string,
+    protected readonly log: DeviceLogger,
   ) {
-    this.lock = new AsyncLock({ timeout: 3000 });
     this.state = {
       power: Power.Off,
       mode: Mode.Auto,
@@ -27,6 +27,8 @@ export class Device {
       filterHours: 0,
     };
   }
+
+  protected abstract ensureUpdated(): Promise<void>;
 
   hasData(): boolean {
     return this.lastWinixPoll > -1;
@@ -132,24 +134,15 @@ export class Device {
 
   async update(): Promise<void> {
     this.log.debug('device:update()');
-    this.state = await WinixAPI.getDeviceStatus(this.deviceId);
+    const newState = await WinixAPI.getDeviceStatus(this.deviceId);
+    Object.assign(this.state, newState);
     this.log.debug('device:update()', JSON.stringify(this.state));
     this.lastWinixPoll = Date.now();
   }
 
-  private async ensureUpdated(): Promise<void> {
-    // Use a lock to ensure only one update is running at a time
-    await this.lock.acquire('update', async () => {
-      if (this.shouldUpdate()) {
-        await this.update();
-      }
-    });
-  }
-
-  private shouldUpdate(): boolean {
-    return Date.now() - this.lastWinixPoll > this.cacheIntervalMs;
-  }
-
+  /**
+   * Ensures the device is on, returning true if it was turned on
+   */
   private async ensureOn(): Promise<boolean> {
     if (await this.getPower() === Power.On) {
       this.log.debug('device:ensureOn()', 'already on');
@@ -159,5 +152,54 @@ export class Device {
     this.log.debug('device:ensureOn()');
     await this.setPower(Power.On);
     return true;
+  }
+}
+
+/**
+ * Implementation of Device that updates on a regular interval
+ */
+export class UpdateIntervalDevice extends Device {
+
+  constructor(
+    readonly deviceId: string,
+    readonly log: DeviceLogger,
+    readonly updateIntervalMs: number,
+  ) {
+    super(deviceId, log);
+    setInterval(async () => await this.update(), updateIntervalMs);
+  }
+
+  protected async ensureUpdated(): Promise<void> {
+    // do nothing, since updating is handled by the interval
+  }
+}
+
+/**
+ * Implementation of Device that caches the state for a period of time
+ */
+export class CachedDevice extends Device {
+
+  private lock: AsyncLock;
+
+  constructor(
+    readonly deviceId: string,
+    readonly log: DeviceLogger,
+    private readonly cacheIntervalMs: number,
+  ) {
+    super(deviceId, log);
+    this.lock = new AsyncLock({ timeout: 3000 });
+  }
+
+  protected async ensureUpdated(): Promise<void> {
+    // Use a lock to ensure only one update is running at a time
+    await this.lock.acquire('ensureUpdated', async () => {
+      if (this.shouldUpdate()) {
+        await this.update();
+      }
+    });
+  }
+
+  private shouldUpdate(): boolean {
+    return Date.now() - this.lastWinixPoll > this.cacheIntervalMs;
   }
 }
