@@ -1,5 +1,10 @@
 import { WinixExistingAuth } from 'winix-api';
 
+export interface WinixPluginAuth extends WinixExistingAuth {
+  // Addition of password field for ability to regenerate refresh token
+  password: string;
+}
+
 export interface DeviceOverride {
   deviceId: string;
   serialNumber?: string;
@@ -11,7 +16,7 @@ export interface DeviceOverride {
 }
 
 export interface WinixPlatformConfig {
-  auth?: WinixExistingAuth;
+  auth?: WinixPluginAuth;
   exposeAirQuality?: boolean;
   exposeAmbientLight?: boolean;
   exposePlasmawave?: boolean;
