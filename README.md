@@ -17,6 +17,7 @@
         * [Properties](#properties)
 * [FAQ](#faq)
     * [Upgrading from the old plugin architecture (v1.x.x) to the new one (v2.x.x)?](#upgrading-from-the-old-plugin-architecture-v1xx-to-the-new-one-v2xx)
+    * [Using HOOBS?](#using-hoobs)
     * [Missing “Auto/Manual” switch in Home app?](#missing-automanual-switch-in-home-app)
     * [Having issues moving your purifier to a room in the Home app with the same name?](#having-issues-moving-your-purifier-to-a-room-in-the-home-app-with-the-same-name)
 * [Acknowledgments](#acknowledgments)
@@ -139,6 +140,14 @@ Please follow the Migration Guide in the Wiki:
 
 [Migrating from v1.x.x to v2.x.x](https://github.com/regaw-leinad/homebridge-winix-purifiers/wiki/Migrating-from-v1.x.x-to-v2.x.x).
 
+### Using HOOBS?
+
+If you're using [HOOBS](https://hoobs.org), you can install the plugin directly from the HOOBS interface. You will not
+be able to use the custom configuration UI, since it is not supported in HOOBS. You will need to use the manual
+configuration method. Please see
+[this issue](https://github.com/regaw-leinad/homebridge-winix-purifiers/issues/16#issuecomment-2241786391) for more
+details on obtaining the required `auth` values.
+
 ### Missing “Auto/Manual” switch in Home app?
 
 Please see [this issue](https://github.com/regaw-leinad/homebridge-winix-purifiers/issues/1) for more details.
@@ -158,5 +167,4 @@ it to "Bedroom".
   [authentication system](https://github.com/regaw-leinad/winix-api) is heavily based on
 - [@jonnyborbs](https://github.com/jonnyborbs) - invaluable testing and feedback
 - [@martinianodl](https://github.com/martinianodl) - discovered the alternate Winix account setup for Homebridge
-- [@shyawnkarim](https://github.com/shyawnkarim) - all around good guy and initial plugin
-  tester ([hire him](https://www.linkedin.com/in/shyawnkarim)!)
+- [@shyawnkarim](https://github.com/shyawnkarim) - all around good guy and initial plugin tester
