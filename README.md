@@ -148,6 +148,14 @@ configuration method. Please see
 [this issue](https://github.com/regaw-leinad/homebridge-winix-purifiers/issues/16#issuecomment-2241786391) for more
 details on obtaining the required `auth` values.
 
+### Auth Error?
+
+Getting `error generating winix account from existing auth: NotAuthorizedException: Refresh Token has expired`? Winix
+refresh tokens expire after 30 days. For now, you will need to generate a new refresh token by re-authenticating with
+Winix. Find the `Reauthenticate with Winix` button in the plugin config settings in the Homebridge UI, and sign in with
+your email and password. Work has started on a new feature to automate this process
+([branch](https://github.com/regaw-leinad/homebridge-winix-purifiers/tree/password-auth)).
+
 ### Missing “Auto/Manual” switch in Home app?
 
 Please see [this issue](https://github.com/regaw-leinad/homebridge-winix-purifiers/issues/1) for more details.
