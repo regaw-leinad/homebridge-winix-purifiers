@@ -1,7 +1,7 @@
-/* eslint-disable no-console */
-
 import { HomebridgePluginUiServer, RequestError } from '@homebridge/plugin-ui-utils';
-import { WinixAccount, WinixAuth, WinixAuthResponse, WinixDevice, WinixExistingAuth } from 'winix-api';
+import { WinixDevice } from 'winix-api';
+import { WinixPluginAuth } from '../config';
+import { UnauthenticatedError, WinixHandler } from '../winix';
 
 export interface LoginRequest {
   email: string;
@@ -14,46 +14,53 @@ export interface Device {
   modelName: string;
 }
 
-export interface DeviceResponse {
+export interface DiscoverResponse {
   devices: Device[];
 }
 
+export interface NeedsLoginResponse {
+  needsLogin: boolean;
+}
+
 class PluginUiServer extends HomebridgePluginUiServer {
+  private winix: WinixHandler;
+
   constructor() {
     super();
+
+    this.winix = new WinixHandler(this.homebridgeStoragePath!);
+
+    this.onRequest('/needs-login', this.needsLogin.bind(this));
     this.onRequest('/login', this.login.bind(this));
     this.onRequest('/discover', this.discoverDevices.bind(this));
     this.ready();
   }
 
-  async login({ email, password }: LoginRequest): Promise<WinixExistingAuth> {
-    console.log(`Logging in with email '${email}' and password`);
-
-    let auth: WinixAuthResponse;
-    try {
-      auth = await WinixAuth.login(email, password, 3);
-    } catch (e: unknown) {
-      const message = getErrorMessage(e);
-      console.error(message);
-      throw new RequestError(message, { status: 400 });
-    }
-
-    return {
-      username: email,
-      refreshToken: auth.refreshToken,
-      userId: auth.userId,
-    };
+  async needsLogin(): Promise<NeedsLoginResponse> {
+    const refreshToken = await this.winix.getRefreshToken();
+    return { needsLogin: !refreshToken };
   }
 
-  async discoverDevices(auth: WinixExistingAuth): Promise<DeviceResponse> {
+  async login({ email, password }: LoginRequest): Promise<WinixPluginAuth> {
+    try {
+      return await this.winix.login(email, password);
+    } catch (e: unknown) {
+      const message = getErrorMessage(e);
+      throw new RequestError(message, { status: 400 });
+    }
+  }
+
+  async discoverDevices(): Promise<DiscoverResponse> {
     let winixDevices: WinixDevice[];
 
     try {
-      const account = await WinixAccount.fromExistingAuth(auth);
-      winixDevices = await account.getDevices();
+      winixDevices = await this.winix.getDevices();
     } catch (e: unknown) {
+      if (e instanceof UnauthenticatedError) {
+        throw new RequestError('Not authenticated', { status: 401 });
+      }
+
       const message = getErrorMessage(e);
-      console.error(message);
       throw new RequestError(message, { status: 500 });
     }
 

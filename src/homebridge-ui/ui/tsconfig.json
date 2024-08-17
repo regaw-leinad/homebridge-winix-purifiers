@@ -10,7 +10,8 @@
     ],
     "skipLibCheck": true,
     "types": [
-      "@homebridge/plugin-ui-utils/dist/ui.interface"
+      "@homebridge/plugin-ui-utils/dist/ui.interface",
+      "node"
     ],
     /* Bundler mode */
     "moduleResolution": "bundler",

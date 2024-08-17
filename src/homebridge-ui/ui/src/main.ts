@@ -1,8 +1,7 @@
 /* eslint-disable no-console */
 import { getSchemaDeviceOverrides, schemaLogin } from './schemas.ts';
-import { Device, DeviceResponse } from '../../server.ts';
-import { DeviceOverride } from '../../../config.ts';
-import { WinixExistingAuth } from 'winix-api';
+import { Device, DiscoverResponse, NeedsLoginResponse } from '../../server.ts';
+import { DeviceOverride, WinixPluginAuth } from '../../../config.ts';
 
 const { homebridge } = window;
 const $headerButtons = document.getElementById('header-winix-buttons')!;
@@ -21,13 +20,12 @@ homebridge.showSpinner();
 init();
 
 async function init(): Promise<void> {
-  const [config] = await homebridge.getPluginConfig();
-  const hasToken = config?.auth?.refreshToken;
+  const { needsLogin } = await homebridge.request('/needs-login') as NeedsLoginResponse;
 
-  if (hasToken) {
-    showConfigForm();
-  } else {
+  if (needsLogin) {
     await showLoginForm();
+  } else {
+    showConfigForm();
   }
 }
 
@@ -38,7 +36,8 @@ async function showLoginForm(): Promise<void> {
   $headerButtons?.style.setProperty('display', 'none');
   $headerLinkAccount?.style.setProperty('display', 'block');
 
-  const existingAuth = await hasExistingAuth();
+  const auth = await getExistingAuth();
+  const existingAuth = auth.username;
 
   if (existingAuth) {
     // show the "having issues" text if there is existing auth
@@ -49,7 +48,7 @@ async function showLoginForm(): Promise<void> {
 
   const loginForm = homebridge.createForm(
     schemaLogin,
-    {},
+    existingAuth ? { email: auth.username } : {},
     'Log In',
     existingAuth ? 'Back' : undefined,
   );
@@ -79,12 +78,10 @@ async function showLoginForm(): Promise<void> {
 async function showDeviceOverridesForm(): Promise<void> {
   homebridge.showSpinner();
 
-  // we know we have existing auth since we're showing this form
-  const auth = await getExistingAuth();
-  let resp: DeviceResponse;
+  let resp: DiscoverResponse;
 
   try {
-    resp = await homebridge.request('/discover', auth);
+    resp = await homebridge.request('/discover');
   } catch (e) {
     const error = e as HomebridgeError;
     console.error('error discovering devices', error.message);
@@ -183,23 +180,15 @@ function showConfigForm(): void {
   homebridge.hideSpinner();
 }
 
-async function setExistingAuth(auth: WinixExistingAuth): Promise<void> {
+async function setExistingAuth(auth: WinixPluginAuth): Promise<void> {
   const [config, ...otherConfigs] = await homebridge.getPluginConfig();
   await homebridge.updatePluginConfig([{ ...config, auth }, ...otherConfigs]);
   await homebridge.savePluginConfig();
 }
 
-async function hasExistingAuth(): Promise<boolean> {
+async function getExistingAuth(): Promise<WinixPluginAuth> {
   const [config] = await homebridge.getPluginConfig();
-  return !!config?.auth?.refreshToken;
-}
-
-/**
- * Assumes that you do have existing auth
- */
-async function getExistingAuth(): Promise<WinixExistingAuth> {
-  const [config] = await homebridge.getPluginConfig();
-  return config.auth!;
+  return config.auth ?? {};
 }
 
 interface HomebridgeError {

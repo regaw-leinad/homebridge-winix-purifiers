@@ -1,8 +1,7 @@
-import { WinixExistingAuth } from 'winix-api';
-
-export interface WinixPluginAuth extends WinixExistingAuth {
-  // Addition of password field for ability to regenerate refresh token
+export interface WinixPluginAuth {
+  username: string;
   password: string;
+  userId: string;
 }
 
 export interface DeviceOverride {

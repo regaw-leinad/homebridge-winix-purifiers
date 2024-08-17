@@ -11,10 +11,11 @@ import {
 } from 'homebridge';
 import { DeviceOverride, WinixPlatformConfig } from './config';
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
-import { WinixAccount, WinixDevice } from 'winix-api';
+import { WinixDevice } from 'winix-api';
 import { WinixPurifierAccessory } from './accessory';
 import { DeviceLogger } from './logger';
 import { assertError } from './errors';
+import { NotConfiguredError, UnauthenticatedError, WinixHandler } from './winix';
 
 const DEFAULT_DEVICE_REFRESH_INTERVAL_MINUTES = 60;
 
@@ -32,7 +33,7 @@ export class WinixPurifierPlatform implements DynamicPlatformPlugin {
   private readonly accessories: Map<string, PlatformAccessory<DeviceContext>>;
   private readonly handlers: Map<string, WinixPurifierAccessory>;
   private readonly deviceOverrides: Map<string, DeviceOverride>;
-  private winix?: WinixAccount;
+  private winix: WinixHandler;
 
   constructor(
     private readonly log: Logger,
@@ -44,21 +45,27 @@ export class WinixPurifierPlatform implements DynamicPlatformPlugin {
     this.handlers = new Map<string, WinixPurifierAccessory>();
     this.deviceOverrides = (this.config.deviceOverrides ?? [])
       .reduce((m, o) => m.set(o.deviceId, o), new Map<string, DeviceOverride>());
+    this.winix = new WinixHandler(api.user.storagePath());
 
     this.api.on(APIEvent.DID_FINISH_LAUNCHING, this.onFinishLaunching.bind(this));
   }
 
   async onFinishLaunching(): Promise<void> {
-    if (!this.config.auth?.refreshToken) {
-      this.log.warn('Winix Purifiers is NOT set up. ' +
-        'Please link your Winix account in the Homebridge UI.');
+    if (!this.config.auth) {
+      this.notConfigured();
       return;
     }
 
     try {
-      this.winix = await WinixAccount.fromExistingAuth(this.config.auth);
+      await this.winix.refresh(this.config.auth);
     } catch (e: unknown) {
-      this.log.error('error generating winix account from existing auth:', e);
+      if (e instanceof NotConfiguredError) {
+        this.notConfigured();
+        return;
+      }
+
+      assertError(e);
+      this.log.error('error getting devices:', e.message);
       return;
     }
 
@@ -74,22 +81,20 @@ export class WinixPurifierPlatform implements DynamicPlatformPlugin {
     let devices: WinixDevice[] | undefined;
 
     try {
-      devices = await this.winix?.getDevices();
+      devices = await this.winix.getDevices();
     } catch (e: unknown) {
+      if (e instanceof UnauthenticatedError) {
+        this.notConfigured();
+        return;
+      }
+
       assertError(e);
       this.log.error('error getting devices:', e.message);
       return;
     }
 
-    // if devices is explicitly typeof undefined, then the user has not logged in yet
-    if (typeof devices === 'undefined') {
-      this.log.warn('Winix Purifiers is NOT set up. ' +
-        'Please log in with your Winix account credentials in the Homebridge UI.');
-      return;
-    }
-
     if (devices.length === 0) {
-      this.log.warn('No Winix devices found. Please add devices to your Winix account.');
+      this.log.error('No Winix devices found. Please add devices to your Winix account.');
     }
 
     const accessoriesToAdd: PlatformAccessory<DeviceContext>[] = [];
@@ -169,5 +174,10 @@ export class WinixPurifierPlatform implements DynamicPlatformPlugin {
 
   private doNada(): void {
     // do nothing
+  }
+
+  private notConfigured(): void {
+    this.log.error('Winix Purifiers is NOT set up. ' +
+      'Please link your Winix account in the Homebridge UI.');
   }
 }
