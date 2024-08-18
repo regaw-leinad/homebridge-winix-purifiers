@@ -188,7 +188,7 @@ async function setExistingAuth(auth: WinixPluginAuth): Promise<void> {
 
 async function getExistingAuth(): Promise<WinixPluginAuth> {
   const [config] = await homebridge.getPluginConfig();
-  return config.auth ?? {};
+  return config && config.auth ? config.auth : {};
 }
 
 interface HomebridgeError {
