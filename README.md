@@ -12,6 +12,7 @@
 * [Device Support](#device-support)
 * [Configuration](#configuration)
     * [Alternate Winix Account Setup for Homebridge](#alternate-winix-account-setup-for-homebridge)
+    * [Important: Set Your Encryption Key](#important-set-your-encryption-key)
     * [Homebridge Configuration UI](#homebridge-configuration-ui)
     * [Manual Configuration](#manual-configuration)
         * [Properties](#properties)
