@@ -1,7 +1,8 @@
 import { RefreshTokenExpiredError, WinixAccount, WinixAuth, WinixAuthResponse, WinixDevice } from 'winix-api';
 import { NotConfiguredError, UnauthenticatedError, WinixHandler } from '../src/winix';
 import { afterEach, beforeEach, describe, expect, it, Mock, vi } from 'vitest';
-import { readFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import path from 'node:path';
 
 vi.mock('node:fs/promises');
 vi.mock('winix-api');
@@ -14,6 +15,7 @@ describe('WinixHandler', () => {
   };
 
   const mockToken = 'mock-refresh-token';
+  const mockDevices = [{} as WinixDevice];
   const storagePath = '/mock/storage';
 
   let handler: WinixHandler;
@@ -134,23 +136,69 @@ describe('WinixHandler', () => {
     });
 
     it('should return devices if winix is authenticated', async () => {
-      const mockDevices = [{} as WinixDevice];
-
       handler['winix'] = {
         getDevices: vi.fn().mockResolvedValue(mockDevices),
       } as unknown as WinixAccount;
+      handler['auth'] = mockAuth;
 
       const devices = await handler.getDevices();
 
       expect(devices).toEqual(mockDevices);
+      expect(handler['winix']?.getDevices).toHaveBeenCalled();
     });
 
     it('should throw an error if fetching devices fails', async () => {
       handler['winix'] = {
         getDevices: vi.fn().mockRejectedValue(new Error('Failed to fetch devices')),
       } as unknown as WinixAccount;
+      handler['auth'] = mockAuth;
 
       await expect(handler.getDevices()).rejects.toThrow('Failed to fetch devices');
+      expect(handler['winix']?.getDevices).toHaveBeenCalled();
+    });
+
+    it('should handle RefreshTokenExpiredError during getDevices and re-login', async () => {
+      handler['auth'] = mockAuth;
+      handler['winix'] = {
+        getDevices: vi.fn().mockRejectedValueOnce(new RefreshTokenExpiredError()).mockResolvedValue(mockDevices),
+      } as unknown as WinixAccount;
+
+      vi.spyOn(handler, 'login').mockResolvedValue(mockAuth);
+
+      const devices = await handler.getDevices();
+
+      expect(handler.login).toHaveBeenCalledWith(mockAuth.username, mockAuth.password);
+      expect(devices).toEqual(mockDevices);
+    });
+  });
+
+  describe('setRefreshToken', () => {
+    it('should write the refresh token to file', async () => {
+      vi.spyOn(handler as never, 'ensureDirectoryExists').mockResolvedValue(undefined);
+      await handler['setRefreshToken'](mockToken);
+
+      expect(writeFile).toHaveBeenCalledWith(handler['refreshTokenPath'], mockToken, { encoding: 'utf8' });
+    });
+
+    it('should throw an error if writing the token fails', async () => {
+      vi.spyOn(handler as never, 'ensureDirectoryExists').mockResolvedValue(undefined);
+      (writeFile as Mock).mockRejectedValue(new Error('Failed to write token'));
+
+      await expect(handler['setRefreshToken'](mockToken)).rejects.toThrow('Failed to write token');
+    });
+  });
+
+  describe('ensureDirectoryExists', () => {
+    it('should create the directory if it does not exist', async () => {
+      await handler['ensureDirectoryExists']();
+
+      expect(mkdir).toHaveBeenCalledWith(path.dirname(handler['refreshTokenPath']), { recursive: true });
+    });
+
+    it('should throw an error if directory creation fails', async () => {
+      (mkdir as Mock).mockRejectedValue(new Error('Failed to create directory'));
+
+      await expect(handler['ensureDirectoryExists']()).rejects.toThrow('Failed to create directory');
     });
   });
 });

@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 import { getSchemaDeviceOverrides, schemaLogin } from './schemas.ts';
-import { Device, DiscoverResponse, NeedsLoginResponse } from '../../server.ts';
+import { Device, DiscoverResponse, InitResponse } from '../../winix.ts';
 import { DeviceOverride, WinixPluginAuth } from '../../../config.ts';
 
 const { homebridge } = window;
@@ -20,7 +20,8 @@ homebridge.showSpinner();
 init();
 
 async function init(): Promise<void> {
-  const { needsLogin } = await homebridge.request('/needs-login') as NeedsLoginResponse;
+  const auth = await getExistingAuth();
+  const { needsLogin } = await homebridge.request('/init', auth) as InitResponse;
 
   if (needsLogin) {
     await showLoginForm();
@@ -37,9 +38,9 @@ async function showLoginForm(): Promise<void> {
   $headerLinkAccount?.style.setProperty('display', 'block');
 
   const auth = await getExistingAuth();
-  const existingAuth = auth.username;
+  const hasExistingAuth = !!auth.username;
 
-  if (existingAuth) {
+  if (hasExistingAuth) {
     // show the "having issues" text if there is existing auth
     $txtAuthIssues?.style.setProperty('display', 'block');
   }
@@ -48,9 +49,9 @@ async function showLoginForm(): Promise<void> {
 
   const loginForm = homebridge.createForm(
     schemaLogin,
-    existingAuth ? { email: auth.username } : {},
+    hasExistingAuth ? { email: auth.username } : {},
     'Log In',
-    existingAuth ? 'Back' : undefined,
+    hasExistingAuth ? 'Back' : undefined,
   );
 
   loginForm.onSubmit(async ({ email, password }) => {

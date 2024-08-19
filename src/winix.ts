@@ -20,6 +20,7 @@ export class UnauthenticatedError extends Error {
 
 export class WinixHandler {
   private readonly refreshTokenPath: string;
+  private auth?: WinixPluginAuth;
   private winix?: WinixAccount;
 
   constructor(storagePath: string) {
@@ -59,6 +60,7 @@ export class WinixHandler {
     }
 
     await this.setRefreshToken(response.refreshToken);
+    this.auth = auth;
     this.winix = await WinixAccount.from(auth.username, response);
   }
 
@@ -80,12 +82,9 @@ export class WinixHandler {
 
     await this.setRefreshToken(response.refreshToken);
     this.winix = await WinixAccount.from(email, response);
+    this.auth = { username: email, userId: response.userId, password: password };
 
-    return {
-      username: email,
-      userId: response.userId,
-      password: password,
-    };
+    return this.auth;
   }
 
   async getRefreshToken(): Promise<string> {
@@ -94,11 +93,25 @@ export class WinixHandler {
   }
 
   async getDevices(): Promise<WinixDevice[]> {
-    if (!this.winix) {
+    if (!this.winix || !this.auth) {
       throw new UnauthenticatedError();
     }
 
-    return await this.winix.getDevices();
+    let devices: WinixDevice[] | undefined;
+
+    try {
+      devices = await this.winix.getDevices();
+    } catch (e: unknown) {
+      if (!(e instanceof RefreshTokenExpiredError)) {
+        throw e;
+      }
+
+      // if we get a refresh token expiry, we need to re-login and get devices again
+      await this.login(this.auth.username, this.auth.password);
+      return await this.winix.getDevices();
+    }
+
+    return devices;
   }
 
   private ensureConfigured(auth: WinixPluginAuth): void {

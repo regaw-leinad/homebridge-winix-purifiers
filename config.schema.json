@@ -179,8 +179,8 @@
       "orderable": false,
       "items": [
         "auth.username",
-        "auth.userId",
-        "auth.password"
+        "auth.password",
+        "auth.userId"
       ]
     }
   ]
