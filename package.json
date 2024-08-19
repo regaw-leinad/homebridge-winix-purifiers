@@ -29,12 +29,15 @@
     "ci:server": "yarn --frozen-lockfile",
     "ci:ui": "yarn --cwd ./src/homebridge-ui/ui --frozen-lockfile",
     "clean": "rm -rf ./dist && rm -rf ./src/homebridge-ui/ui/dist",
+    "encrypt-password": "ts-node ./encrypt-password.ts",
     "install:ui": "yarn --cwd ./src/homebridge-ui/ui",
     "lint": "yarn lint:server && yarn lint:ui",
     "lint:server": "eslint ./src/**.ts --max-warnings=0",
     "lint:ui": "eslint ./src/homebridge-ui/**/**.ts --max-warnings=0",
     "postversion": "git push && git push --tags && yarn clean",
     "prepublishOnly": "yarn validate",
+    "test": "vitest",
+    "test:coverage": "vitest run --coverage",
     "validate": "yarn lint && yarn build",
     "version": "yarn validate"
   },
@@ -51,16 +54,19 @@
   "dependencies": {
     "@homebridge/plugin-ui-utils": "^1.0.1",
     "async-lock": "^1.4.1",
-    "winix-api": "1.5.0"
+    "winix-api": "1.5.3"
   },
   "devDependencies": {
     "@types/async-lock": "^1.4.2",
     "@types/node": "^20.11.0",
     "@typescript-eslint/eslint-plugin": "^6.18.1",
     "@typescript-eslint/parser": "^6.18.1",
+    "@vitest/coverage-v8": "^2.0.5",
     "eslint": "^8.0.1",
     "homebridge": "^1.7.0",
     "nodemon": "^3.0.2",
-    "typescript": "^5.3.3"
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3",
+    "vitest": "^2.0.5"
   }
 }

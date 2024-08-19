@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite';
+import ViteMinifyPlugin from 'vite-plugin-minify';
 
 export default defineConfig({
   base: './',
@@ -10,4 +11,7 @@ export default defineConfig({
       treeshake: true,
     },
   },
+  plugins: [
+    ViteMinifyPlugin(),
+  ],
 });

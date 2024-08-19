@@ -1,67 +1,50 @@
-/* eslint-disable no-console */
-
 import { HomebridgePluginUiServer, RequestError } from '@homebridge/plugin-ui-utils';
-import { WinixAccount, WinixAuth, WinixAuthResponse, WinixDevice, WinixExistingAuth } from 'winix-api';
+import { DiscoverResponse, InitResponse, LoginRequest, WinixService } from './winix';
+import { UnauthenticatedError } from '../winix';
+import { ENCRYPTION_KEY } from '../settings';
+import { WinixPluginAuth } from '../config';
 
-export interface LoginRequest {
-  email: string;
-  password: string;
-}
+export class PluginUiServer extends HomebridgePluginUiServer {
+  private readonly service: WinixService;
 
-export interface Device {
-  deviceId: string;
-  deviceAlias: string;
-  modelName: string;
-}
-
-export interface DeviceResponse {
-  devices: Device[];
-}
-
-class PluginUiServer extends HomebridgePluginUiServer {
   constructor() {
     super();
+    this.service = new WinixService(this.homebridgeStoragePath!, ENCRYPTION_KEY);
+
+    this.onRequest('/init', this.init.bind(this));
     this.onRequest('/login', this.login.bind(this));
     this.onRequest('/discover', this.discoverDevices.bind(this));
     this.ready();
   }
 
-  async login({ email, password }: LoginRequest): Promise<WinixExistingAuth> {
-    console.log(`Logging in with email '${email}' and password`);
-
-    let auth: WinixAuthResponse;
+  async init(auth?: WinixPluginAuth): Promise<InitResponse> {
     try {
-      auth = await WinixAuth.login(email, password, 3);
+      return await this.service.init(auth);
     } catch (e: unknown) {
-      const message = getErrorMessage(e);
-      console.error(message);
-      throw new RequestError(message, { status: 400 });
+      return { needsLogin: true };
     }
-
-    return {
-      username: email,
-      refreshToken: auth.refreshToken,
-      userId: auth.userId,
-    };
   }
 
-  async discoverDevices(auth: WinixExistingAuth): Promise<DeviceResponse> {
-    let winixDevices: WinixDevice[];
-
+  async login(request: LoginRequest): Promise<WinixPluginAuth> {
     try {
-      const account = await WinixAccount.fromExistingAuth(auth);
-      winixDevices = await account.getDevices();
+      return await this.service.login(request);
     } catch (e: unknown) {
       const message = getErrorMessage(e);
-      console.error(message);
+      throw new RequestError(message, { status: 400 });
+    }
+  }
+
+  async discoverDevices(): Promise<DiscoverResponse> {
+    try {
+      return await this.service.discoverDevices();
+    } catch (e: unknown) {
+      if (e instanceof UnauthenticatedError) {
+        throw new RequestError('Not authenticated', { status: 401 });
+      }
+
+      const message = getErrorMessage(e);
       throw new RequestError(message, { status: 500 });
     }
-
-    const devices: Device[] = winixDevices.map(({ deviceAlias, deviceId, modelName }) => {
-      return { deviceId, deviceAlias, modelName };
-    });
-
-    return { devices };
   }
 }
 

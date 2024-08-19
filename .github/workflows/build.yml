@@ -1,4 +1,4 @@
-name: Build and Lint
+name: Build, Lint and Test
 
 on: [ push, pull_request ]
 
@@ -28,5 +28,10 @@ jobs:
 
       - name: Build the project
         run: yarn build
+        env:
+          CI: true
+
+      - name: Test the code
+        run: yarn test
         env:
           CI: true

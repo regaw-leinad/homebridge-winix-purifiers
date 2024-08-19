@@ -1,4 +1,8 @@
-import { WinixExistingAuth } from 'winix-api';
+export interface WinixPluginAuth {
+  username: string;
+  password: string;
+  userId: string;
+}
 
 export interface DeviceOverride {
   deviceId: string;
@@ -11,7 +15,7 @@ export interface DeviceOverride {
 }
 
 export interface WinixPlatformConfig {
-  auth?: WinixExistingAuth;
+  auth?: WinixPluginAuth;
   exposeAirQuality?: boolean;
   exposeAmbientLight?: boolean;
   exposePlasmawave?: boolean;

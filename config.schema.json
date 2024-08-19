@@ -72,22 +72,22 @@
             "description": "Your Winix account username (email)",
             "readonly": true
           },
+          "password": {
+            "type": "string",
+            "title": "Password",
+            "description": "Your Winix account password (encrypted)",
+            "readonly": true
+          },
           "userId": {
             "type": "string",
             "title": "User ID",
             "description": "Your Winix user ID",
             "readonly": true
-          },
-          "refreshToken": {
-            "type": "string",
-            "title": "Refresh Token",
-            "description": "The refresh token for your Winix account",
-            "readonly": true
           }
         },
         "required": [
-          "refreshToken",
           "username",
+          "password",
           "userId"
         ]
       },
@@ -179,8 +179,8 @@
       "orderable": false,
       "items": [
         "auth.username",
-        "auth.userId",
-        "auth.refreshToken"
+        "auth.password",
+        "auth.userId"
       ]
     }
   ]
