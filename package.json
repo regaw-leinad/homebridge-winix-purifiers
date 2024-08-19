@@ -29,6 +29,7 @@
     "ci:server": "yarn --frozen-lockfile",
     "ci:ui": "yarn --cwd ./src/homebridge-ui/ui --frozen-lockfile",
     "clean": "rm -rf ./dist && rm -rf ./src/homebridge-ui/ui/dist",
+    "encrypt-password": "ts-node ./encrypt-password.ts",
     "install:ui": "yarn --cwd ./src/homebridge-ui/ui",
     "lint": "yarn lint:server && yarn lint:ui",
     "lint:server": "eslint ./src/**.ts --max-warnings=0",
@@ -64,6 +65,7 @@
     "eslint": "^8.0.1",
     "homebridge": "^1.7.0",
     "nodemon": "^3.0.2",
+    "ts-node": "^10.9.2",
     "typescript": "^5.3.3",
     "vitest": "^2.0.5"
   }

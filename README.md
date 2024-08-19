@@ -16,6 +16,7 @@
     * [Homebridge Configuration UI](#homebridge-configuration-ui)
     * [Manual Configuration](#manual-configuration)
         * [Properties](#properties)
+        * [Encrypting Your Password](#encrypting-your-password-for-manual-setup-and-hoobs-users)
 * [FAQ](#faq)
     * [Upgrading from the old plugin architecture (v1.x.x) to the new one (v2.x.x)?](#upgrading-from-the-old-plugin-architecture-v1xx-to-the-new-one-v2xx)
     * [Using HOOBS?](#using-hoobs)
@@ -95,8 +96,8 @@ While not recommended, if manual setup is required, add the following to the `pl
       "deviceRefreshIntervalMinutes": 60,
       "auth": {
         "username": "your-email@domain.com",
-        "userId": "f470ce5f-6b8e-44b4-a6db-b7f4d4c6f851",
-        "refreshToken": "<refresh token>"
+        "password": "<encrypted-winix-password> (see below)",
+        "userId": "f470ce5f-6b8e-44b4-a6db-b7f4d4c6f851"
       },
       "deviceOverrides": [
         {
@@ -120,28 +121,73 @@ While not recommended, if manual setup is required, add the following to the `pl
 
 #### Properties
 
-| Name                                       | Default Value      | Note                                                                                                               |
-|--------------------------------------------|--------------------|--------------------------------------------------------------------------------------------------------------------|
-| `exposeAirQuality`                         | `false`            | Whether to expose the air quality sensors to HomeKit.                                                              |
-| `exposeAmbientLight`                       | `false`            | Whether to expose the ambient light sensors to HomeKit.                                                            |
-| `exposePlasmawave`                         | `false`            | Whether to expose switches for Plasmawave on/off.                                                                  |
-| `exposeAutoSwitch`                         | `false`            | Whether to expose switches for Auto mode on/off.                                                                   |
-| `exposeSleepSwitch`                        | `false`            | Whether to expose switches for Sleep mode on/off.                                                                  |
-| `filterReplacementIndicatorPercentage`     | `10`               | Percentage of filter life remaining to trigger a filter replacement alert.                                         |
-| `cacheIntervalSeconds`                     | `60`               | Time, in seconds, for how long to reuse cached responses from Winix.                                               |
-| `deviceRefreshIntervalMinutes`             | `60`               | Time, in minutes, for how often to poll Winix to refresh the device list.                                          |
-| `auth.username`                            | `""`               | Your Winix account username (email). This field is meant to be read-only after being generated in the UI.          |
-| `auth.userId`                              | `""`               | Your Winix user ID for the Cognito User Pool. This field is meant to be read-only after being generated in the UI. |
-| `auth.refreshToken`                        | `""`               | The refresh token for your Winix account. This field is meant to be read-only after being generated in the UI.     |
-| `deviceOverrides[].deviceId`               | `"<deviceId>"`     | The ID of the device.                                                                                              |
-| `deviceOverrides[].serialNumber`           | `"WNXAI00000000"`  | The serial number of the device. Optional.                                                                         |
-| `deviceOverrides[].nameDevice`             | `"<Winix Alias>"`  | The display name of the device. Optional.                                                                          |
-| `deviceOverrides[].nameAirQualitySensor`   | `"Air Quality"`    | The display name of the air quality sensor. Optional.                                                              |
-| `deviceOverrides[].nameAmbientLightSensor` | `"Ambient Light"`  | The display name of the ambient light sensor. Optional.                                                            |
-| `deviceOverrides[].namePlasmawaveSwitch`   | `"Plasmawave"`     | The display name of the Plasmawave switch. Optional.                                                               |
-| `deviceOverrides[].nameAutoSwitch`         | `"Auto Mode"`      | The display name of the Auto switch. Optional.                                                                     |
-| `deviceOverrides[].nameSleepSwitch`        | `"Sleep"`          | The display name of the Sleep switch. Optional.                                                                    |
-| `platform`                                 | `"WinixPurifiers"` | Must always be `"WinixPurifiers"` in order for the plugin to load this config.                                     |
+| Name                                       | Default Value      | Note                                                                                                                     |
+|--------------------------------------------|--------------------|--------------------------------------------------------------------------------------------------------------------------|
+| `exposeAirQuality`                         | `false`            | Whether to expose the air quality sensors to HomeKit.                                                                    |
+| `exposeAmbientLight`                       | `false`            | Whether to expose the ambient light sensors to HomeKit.                                                                  |
+| `exposePlasmawave`                         | `false`            | Whether to expose switches for Plasmawave on/off.                                                                        |
+| `exposeAutoSwitch`                         | `false`            | Whether to expose switches for Auto mode on/off.                                                                         |
+| `exposeSleepSwitch`                        | `false`            | Whether to expose switches for Sleep mode on/off.                                                                        |
+| `filterReplacementIndicatorPercentage`     | `10`               | Percentage of filter life remaining to trigger a filter replacement alert.                                               |
+| `cacheIntervalSeconds`                     | `60`               | Time, in seconds, for how long to reuse cached responses from Winix.                                                     |
+| `deviceRefreshIntervalMinutes`             | `60`               | Time, in minutes, for how often to poll Winix to refresh the device list.                                                |
+| `auth.username`                            | `""`               | Your Winix account username (email). This field is meant to be read-only in the UI.                                      |
+| `auth.password`                            | `""`               | Your Winix account password (encrypted). This field is meant to be read-only in the UI. See below for manual generation. |
+| `auth.userId`                              | `""`               | Your Winix user ID for the Cognito User Pool. This field is meant to be read-only after being generated in the UI.       |
+| `deviceOverrides[].deviceId`               | `"<deviceId>"`     | The ID of the device.                                                                                                    |
+| `deviceOverrides[].serialNumber`           | `"WNXAI00000000"`  | The serial number of the device. Optional.                                                                               |
+| `deviceOverrides[].nameDevice`             | `"<Winix Alias>"`  | The display name of the device. Optional.                                                                                |
+| `deviceOverrides[].nameAirQualitySensor`   | `"Air Quality"`    | The display name of the air quality sensor. Optional.                                                                    |
+| `deviceOverrides[].nameAmbientLightSensor` | `"Ambient Light"`  | The display name of the ambient light sensor. Optional.                                                                  |
+| `deviceOverrides[].namePlasmawaveSwitch`   | `"Plasmawave"`     | The display name of the Plasmawave switch. Optional.                                                                     |
+| `deviceOverrides[].nameAutoSwitch`         | `"Auto Mode"`      | The display name of the Auto switch. Optional.                                                                           |
+| `deviceOverrides[].nameSleepSwitch`        | `"Sleep"`          | The display name of the Sleep switch. Optional.                                                                          |
+| `platform`                                 | `"WinixPurifiers"` | Must always be `"WinixPurifiers"` in order for the plugin to load this config.                                           |
+
+### Encrypting Your Password (For Manual Setup and HOOBS Users)
+
+If you're configuring the plugin manually or using HOOBS, you need to store your Winix password securely in the
+configuration file. To do this, you must first encrypt your password using the provided `encrypt-password` script.
+
+#### Steps to encrypt your password:
+
+1. **Clone the repository**:
+
+You’ll need to clone this plugin's repository locally to run the encryption script. Make sure you have **Node.js 20+**
+installed on your machine.
+
+```bash
+git clone https://github.com/regaw-leinad/homebridge-winix-purifiers.git
+cd homebridge-winix-purifiers
+```
+
+2. **Run the encryption command**:
+
+Use the following command in your terminal:
+
+```bash
+npm run encrypt-password <winix-password> <your-encryption-key>
+```
+
+Replace `<winix-password>` with your actual Winix account password and `<your-encryption-key>` with the key you plan to
+use.
+
+3. **Update your configuration**:
+
+The script will output the encrypted password. Copy the result and paste it into the `"password"` field in your
+`config.json` under the `"auth"` section:
+
+```json
+{
+  "auth": {
+    "username": "your-email@domain.com",
+    "userId": "f470ce5f-6b8e-44b4-a6db-b7f4d4c6f851",
+    "password": "<encrypted-password>"
+  }
+}
+```
+
+This ensures that your password is securely stored within the configuration file.
 
 ## FAQ
 
@@ -158,7 +204,9 @@ If you're using [HOOBS](https://hoobs.org), you can install the plugin directly 
 be able to use the custom configuration UI, since it is not supported in HOOBS. You will need to use the manual
 configuration method. Please see
 [this issue](https://github.com/regaw-leinad/homebridge-winix-purifiers/issues/16#issuecomment-2241786391) for more
-details on obtaining the required `auth` values.
+details on obtaining the required `auth` values. See
+[Encrypting Your Password](#encrypting-your-password-for-manual-setup-and-hoobs-users) for instructions on encrypting
+your Winix password.
 
 ### Auth Error?
 
