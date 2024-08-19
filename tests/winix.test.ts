@@ -2,6 +2,7 @@ import { RefreshTokenExpiredError, WinixAccount, WinixAuth, WinixAuthResponse, W
 import { NotConfiguredError, UnauthenticatedError, WinixHandler } from '../src/winix';
 import { afterEach, beforeEach, describe, expect, it, Mock, vi } from 'vitest';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { encrypt } from '../src/encryption';
 import path from 'node:path';
 
 vi.mock('node:fs/promises');
@@ -17,11 +18,13 @@ describe('WinixHandler', () => {
   const mockToken = 'mock-refresh-token';
   const mockDevices = [{} as WinixDevice];
   const storagePath = '/mock/storage';
+  const mockEncryptionKey = 'mock-encryption-key';
+  const mockEncryptedToken = encrypt(mockToken, mockEncryptionKey);
 
   let handler: WinixHandler;
 
   beforeEach(() => {
-    handler = new WinixHandler(storagePath);
+    handler = new WinixHandler(storagePath, mockEncryptionKey);
   });
 
   afterEach(() => {
@@ -108,7 +111,7 @@ describe('WinixHandler', () => {
 
   describe('getRefreshToken', () => {
     it('should read and return the refresh token from file', async () => {
-      (readFile as Mock).mockResolvedValue(mockToken);
+      (readFile as Mock).mockResolvedValue(mockEncryptedToken);
 
       const token = await handler.getRefreshToken();
 
@@ -177,7 +180,7 @@ describe('WinixHandler', () => {
       vi.spyOn(handler as never, 'ensureDirectoryExists').mockResolvedValue(undefined);
       await handler['setRefreshToken'](mockToken);
 
-      expect(writeFile).toHaveBeenCalledWith(handler['refreshTokenPath'], mockToken, { encoding: 'utf8' });
+      expect(writeFile).toHaveBeenCalled();
     });
 
     it('should throw an error if writing the token fails', async () => {

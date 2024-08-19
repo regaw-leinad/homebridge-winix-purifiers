@@ -9,13 +9,14 @@ import {
   PlatformConfig,
   UnknownContext,
 } from 'homebridge';
+import { NotConfiguredError, UnauthenticatedError, WinixHandler } from './winix';
+import { ENCRYPTION_KEY, PLATFORM_NAME, PLUGIN_NAME } from './settings';
 import { DeviceOverride, WinixPlatformConfig } from './config';
-import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
-import { WinixDevice } from 'winix-api';
 import { WinixPurifierAccessory } from './accessory';
+import { WinixDevice } from 'winix-api';
 import { DeviceLogger } from './logger';
 import { assertError } from './errors';
-import { NotConfiguredError, UnauthenticatedError, WinixHandler } from './winix';
+import { decrypt } from './encryption';
 
 const DEFAULT_DEVICE_REFRESH_INTERVAL_MINUTES = 60;
 
@@ -45,7 +46,7 @@ export class WinixPurifierPlatform implements DynamicPlatformPlugin {
     this.handlers = new Map<string, WinixPurifierAccessory>();
     this.deviceOverrides = (this.config.deviceOverrides ?? [])
       .reduce((m, o) => m.set(o.deviceId, o), new Map<string, DeviceOverride>());
-    this.winix = new WinixHandler(api.user.storagePath());
+    this.winix = new WinixHandler(api.user.storagePath(), ENCRYPTION_KEY);
 
     this.api.on(APIEvent.DID_FINISH_LAUNCHING, this.onFinishLaunching.bind(this));
   }
@@ -54,6 +55,15 @@ export class WinixPurifierPlatform implements DynamicPlatformPlugin {
     if (!this.config.auth) {
       this.notConfigured();
       return;
+    }
+
+    // decrypt the password in memory if there is one
+    if (this.config.auth.password) {
+      try {
+        this.config.auth.password = await decrypt(this.config.auth.password, ENCRYPTION_KEY);
+      } catch (e: unknown) {
+        this.log.error('error decrypting Winix login password from config:', e);
+      }
     }
 
     try {

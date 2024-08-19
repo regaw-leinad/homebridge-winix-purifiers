@@ -75,7 +75,7 @@
           "password": {
             "type": "string",
             "title": "Password",
-            "description": "Your Winix account password",
+            "description": "Your Winix account password (encrypted)",
             "readonly": true
           },
           "userId": {

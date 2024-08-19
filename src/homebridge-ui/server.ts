@@ -1,6 +1,7 @@
 import { HomebridgePluginUiServer, RequestError } from '@homebridge/plugin-ui-utils';
 import { DiscoverResponse, InitResponse, LoginRequest, WinixService } from './winix';
 import { UnauthenticatedError } from '../winix';
+import { ENCRYPTION_KEY } from '../settings';
 import { WinixPluginAuth } from '../config';
 
 export class PluginUiServer extends HomebridgePluginUiServer {
@@ -8,7 +9,7 @@ export class PluginUiServer extends HomebridgePluginUiServer {
 
   constructor() {
     super();
-    this.service = new WinixService(this.homebridgeStoragePath!);
+    this.service = new WinixService(this.homebridgeStoragePath!, ENCRYPTION_KEY);
 
     this.onRequest('/init', this.init.bind(this));
     this.onRequest('/login', this.login.bind(this));

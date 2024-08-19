@@ -1,7 +1,8 @@
-import path from 'node:path';
 import { RefreshTokenExpiredError, WinixAccount, WinixAuth, WinixAuthResponse, WinixDevice } from 'winix-api';
-import { WinixPluginAuth } from './config';
+import { decrypt, DecryptionFailedError, encrypt } from './encryption';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { WinixPluginAuth } from './config';
+import path from 'node:path';
 
 const TOKEN_DIRECTORY_NAME = 'winix-purifiers';
 const TOKEN_FILE_NAME = 'token.json';
@@ -23,7 +24,7 @@ export class WinixHandler {
   private auth?: WinixPluginAuth;
   private winix?: WinixAccount;
 
-  constructor(storagePath: string) {
+  constructor(storagePath: string, private readonly encryptionKey: string) {
     this.refreshTokenPath = path.join(storagePath, TOKEN_DIRECTORY_NAME, TOKEN_FILE_NAME);
   }
 
@@ -89,7 +90,22 @@ export class WinixHandler {
 
   async getRefreshToken(): Promise<string> {
     await this.ensureFileExists();
-    return await readFile(this.refreshTokenPath, { encoding: 'utf8' }) ?? '';
+    const encryptedToken = await readFile(this.refreshTokenPath, { encoding: 'utf8' }) ?? '';
+
+    if (!encryptedToken) {
+      return '';
+    }
+
+    try {
+      return await decrypt(encryptedToken, this.encryptionKey);
+    } catch (e: unknown) {
+      if (!(e instanceof DecryptionFailedError)) {
+        throw e;
+      }
+
+      // if we can't decrypt the token, return empty refresh token
+      return '';
+    }
   }
 
   async getDevices(): Promise<WinixDevice[]> {
@@ -122,7 +138,8 @@ export class WinixHandler {
 
   private async setRefreshToken(token: string): Promise<void> {
     await this.ensureDirectoryExists();
-    await writeFile(this.refreshTokenPath, token, { encoding: 'utf8' });
+    const encryptedToken = await encrypt(token, this.encryptionKey);
+    await writeFile(this.refreshTokenPath, encryptedToken, { encoding: 'utf8' });
   }
 
   private async ensureFileExists(): Promise<void> {

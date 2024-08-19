@@ -1,18 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { WinixService } from '../../src/homebridge-ui/winix';
 import { UnauthenticatedError } from '../../src/winix';
+import { decrypt } from '../../src/encryption';
 import { WinixDevice } from 'winix-api';
 
 vi.mock('../winix');
 const mockAuth = { username: 'test@example.com', password: 'password', userId: '12345' };
 const mockDevices = [{ deviceId: '1', deviceAlias: 'Purifier 1', modelName: 'Model A' } as WinixDevice];
 const mockStoragePath = '/mock/storage';
+const mockEncryptionKey = 'mock-encryption-key';
 
 describe('WinixService', () => {
   let service: WinixService;
 
   beforeEach(() => {
-    service = new WinixService(mockStoragePath);
+    service = new WinixService(mockStoragePath, mockEncryptionKey);
   });
 
   describe('init', () => {
@@ -52,6 +54,8 @@ describe('WinixService', () => {
     it('should login successfully and return auth details', async () => {
       vi.spyOn(service['winix'], 'login').mockResolvedValue(mockAuth);
       const result = await service.login({ email: 'test@example.com', password: 'password' });
+      // Decrypt the password before comparing for test
+      result.password = await decrypt(result.password, mockEncryptionKey);
       expect(result).toEqual(mockAuth);
     });
   });

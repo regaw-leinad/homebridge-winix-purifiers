@@ -1,6 +1,7 @@
-import { WinixDevice } from 'winix-api';
-import { WinixPluginAuth } from '../config';
 import { UnauthenticatedError, WinixHandler } from '../winix';
+import { WinixPluginAuth } from '../config';
+import { WinixDevice } from 'winix-api';
+import { encrypt } from '../encryption';
 
 export interface LoginRequest {
   email: string;
@@ -25,8 +26,8 @@ export class WinixService {
   private readonly winix: WinixHandler;
   private hasValidAuth: boolean;
 
-  constructor(storagePath: string) {
-    this.winix = new WinixHandler(storagePath);
+  constructor(storagePath: string, private encryptionKey: string) {
+    this.winix = new WinixHandler(storagePath, encryptionKey);
     this.hasValidAuth = false;
   }
 
@@ -57,7 +58,9 @@ export class WinixService {
   async login({ email, password }: LoginRequest): Promise<WinixPluginAuth> {
     const result = await this.winix.login(email, password);
     this.hasValidAuth = true;
-    return result;
+
+    const encryptedPassword = await encrypt(password, this.encryptionKey);
+    return { username: email, password: encryptedPassword, userId: result.userId };
   }
 
   async discoverDevices(): Promise<DiscoverResponse> {
