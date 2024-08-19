@@ -36,9 +36,10 @@
     "lint:ui": "eslint ./src/homebridge-ui/**/**.ts --max-warnings=0",
     "postversion": "git push && git push --tags && yarn clean",
     "prepublishOnly": "yarn validate",
-    "test": "vitest",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "validate": "yarn lint && yarn build",
+    "validate": "yarn lint && yarn build && yarn test",
     "version": "yarn validate"
   },
   "keywords": [
