@@ -187,13 +187,19 @@ export class WinixPurifierPlatform implements DynamicPlatformPlugin {
   }
 
   private notConfigured(): void {
+    this.log.error('');
+    this.log.error('');
+
     this.log.error('Winix Purifiers is NOT set up. ' +
       'Please link your Winix account in the Homebridge UI.');
 
     // Message for users migrating from a previous version of the
     // plugin which required a refresh token in the config
     if (this.config.auth && this.config.auth['refreshToken']) {
-      this.log.error('This version of the plugin requires re-linking your Winix account.');
+      this.log.error('The new version of this plugin (v2.1.0+) requires re-linking your Winix account.');
     }
+
+    this.log.error('');
+    this.log.error('');
   }
 }

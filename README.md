@@ -36,7 +36,7 @@
 - **Reliability**: Automatically refreshes device list on a configurable interval to ensure devices are always
   up-to-date.
 - **Seamless Authentication**: Automatically refreshes your Winix authentication token in the background, so you no
-  longer need to manually re-login every 30 days.
+  longer need to manually re-authorize every 30 days.
 - **Encrypted Storage**: Your Winix account password and refresh token are securely stored on disk using encryption,
   keeping your credentials safe.
 
@@ -67,9 +67,9 @@ Wiki page.
 ### Important: Set Your Encryption Key
 
 For added security, you should set the `WINIX_ENCRYPTION_KEY` environment variable when running Homebridge. This will
-allow you to use your own custom encryption key to protect your stored password and refresh token. If this variable is
-not set, the plugin will use a static default key, which is less secure. Directions for setting custom environment
-variables can be found in the [Homebridge documentation](https://github.com/homebridge/homebridge/wiki).
+allow you to use your own custom encryption key string to protect your stored password and refresh token. If this
+variable is not set, the plugin will use a static default key, which is less secure. Directions for setting custom
+environment variables can be found in the [Homebridge documentation](https://github.com/homebridge/homebridge/wiki).
 
 ### Homebridge Configuration UI
 
@@ -174,8 +174,8 @@ use.
 
 3. **Update your configuration**:
 
-The script will output the encrypted password. Copy the result and paste it into the `"password"` field in your
-`config.json` under the `"auth"` section:
+The script will output your encrypted password. Copy the result and paste it into the `password` field in your
+`config.json` under the `auth` section:
 
 ```json
 {
