@@ -12,6 +12,10 @@
   "bugs": {
     "url": "https://github.com/regaw-leinad/homebridge-winix-purifiers/issues"
   },
+  "funding": {
+    "type": "paypal",
+    "url": "https://paypal.me/dwager0"
+  },
   "engines": {
     "node": "^18 || ^20",
     "homebridge": ">=1.7.0"
