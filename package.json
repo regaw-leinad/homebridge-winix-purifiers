@@ -17,8 +17,8 @@
     "url": "https://paypal.me/dwager0"
   },
   "engines": {
-    "node": "^18 || ^20",
-    "homebridge": ">=1.7.0"
+    "node": "^18 || ^20 || ^22",
+    "homebridge": "^1.7.0 || ^2.0.0-beta.0"
   },
   "main": "dist/index.js",
   "files": [
@@ -50,9 +50,11 @@
     "homebridge-plugin",
     "c545",
     "c909",
+    "c610",
     "winix",
     "winix c545",
     "winix c909",
+    "winix c610",
     "winix purifier",
     "winix air purifier"
   ],
