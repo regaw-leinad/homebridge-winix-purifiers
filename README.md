@@ -45,6 +45,7 @@
 This plugin officially supports the following Winix air purifiers:
 
 * C545
+* C610
 * C909
 
 While other models aren't explicitly blocked, they're not yet officially supported and may not work as expected.
