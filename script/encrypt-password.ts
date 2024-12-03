@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 
-import { encrypt } from './src/encryption';
+import { encrypt } from '../src/encryption';
 
 async function main() {
   if (process.argv.length < 4) {
