@@ -495,6 +495,8 @@ export class WinixPurifierAccessory {
     switch (airQuality) {
       case AirQuality.Good:
         return this.Characteristic.AirQuality.GOOD;
+      case AirQuality.GoodAlternate:
+        return this.Characteristic.AirQuality.GOOD;
       case AirQuality.Fair:
         return this.Characteristic.AirQuality.FAIR;
       case AirQuality.Poor:
