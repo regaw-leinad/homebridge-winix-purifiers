@@ -61,7 +61,7 @@
   "dependencies": {
     "@homebridge/plugin-ui-utils": "^1.0.1",
     "async-lock": "^1.4.1",
-    "winix-api": "1.5.3"
+    "winix-api": "1.5.5"
   },
   "devDependencies": {
     "@types/async-lock": "^1.4.2",
