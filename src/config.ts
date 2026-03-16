@@ -22,7 +22,7 @@ export interface WinixPlatformConfig {
   exposeAutoSwitch?: boolean;
   exposeSleepSwitch?: boolean;
   filterReplacementIndicatorPercentage?: number;
-  cacheIntervalSeconds?: number;
+  pollIntervalSeconds?: number;
   deviceRefreshIntervalMinutes?: number;
   deviceOverrides?: DeviceOverride[];
 }
