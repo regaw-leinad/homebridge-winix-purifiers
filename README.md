@@ -18,7 +18,6 @@
         * [Properties](#properties)
         * [Encrypting Your Password](#encrypting-your-password-for-manual-setup-and-hoobs-users)
 * [FAQ](#faq)
-    * [Upgrading from the old plugin architecture (v1.x.x) to the new one (v2.x.x)?](#upgrading-from-the-old-plugin-architecture-v1xx-to-the-new-one-v2xx)
     * [Using HOOBS?](#using-hoobs)
     * [Missing “Auto/Manual” switch in Home app?](#missing-automanual-switch-in-home-app)
     * [Having issues moving your purifier to a room in the Home app with the same name?](#having-issues-moving-your-purifier-to-a-room-in-the-home-app-with-the-same-name)
@@ -154,7 +153,7 @@ configuration file. To do this, you must first encrypt your password using the p
 
 1. **Clone the repository**:
 
-You’ll need to clone this plugin's repository locally to run the encryption script. Make sure you have **Node.js 20+**
+You’ll need to clone this plugin's repository locally to run the encryption script. Make sure you have **Node.js 22+**
 installed on your machine.
 
 ```bash
@@ -192,13 +191,6 @@ This ensures that your password is securely stored within the configuration file
 
 ## FAQ
 
-### Upgrading from the old plugin architecture (v1.x.x) to the new one (v2.x.x)?
-
-Unfortunately, there's no way to directly migrate from the old plugin architecture to the new one.
-Please follow the Migration Guide in the Wiki:
-
-[Migrating from v1.x.x to v2.x.x](https://github.com/regaw-leinad/homebridge-winix-purifiers/wiki/Migrating-from-v1.x.x-to-v2.x.x).
-
 ### Using HOOBS?
 
 If you're using [HOOBS](https://hoobs.org), you can install the plugin directly from the HOOBS interface. You will not
@@ -208,14 +200,6 @@ configuration method. Please see
 details on obtaining the required `auth` values. See
 [Encrypting Your Password](#encrypting-your-password-for-manual-setup-and-hoobs-users) for instructions on encrypting
 your Winix password.
-
-### Auth Error?
-
-Getting `error generating winix account from existing auth: NotAuthorizedException: Refresh Token has expired`? Winix
-refresh tokens expire after 30 days. For now, you will need to generate a new refresh token by re-authenticating with
-Winix. Find the `Reauthenticate with Winix` button in the plugin config settings in the Homebridge UI, and sign in with
-your email and password. Work has started on a new feature to automate this process
-([branch](https://github.com/regaw-leinad/homebridge-winix-purifiers/tree/password-auth)).
 
 ### Missing “Auto/Manual” switch in Home app?
 
