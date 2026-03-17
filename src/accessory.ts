@@ -1,4 +1,4 @@
-import { CharacteristicValue, PlatformAccessory, Service } from 'homebridge';
+import { CharacteristicValue, HAPStatus, PlatformAccessory, Service } from 'homebridge';
 import { Airflow, AirQuality, Mode, Plasmawave, Power } from 'winix-api';
 import { DeviceContext, WinixPurifierPlatform } from './platform';
 import { DeviceOverride, WinixPlatformConfig } from './config';
@@ -12,7 +12,8 @@ import { Device } from './device';
  */
 const MAX_FILTER_HOURS = 6480;
 const DEFAULT_FILTER_LIFE_REPLACEMENT_PERCENTAGE = 10;
-const DEFAULT_CACHE_INTERVAL_SECONDS = 60;
+const DEFAULT_POLL_INTERVAL_SECONDS = 30;
+const MIN_POLL_INTERVAL_SECONDS = 15;
 const MIN_AMBIENT_LIGHT = 0.0001;
 
 export class WinixPurifierAccessory {
@@ -20,7 +21,7 @@ export class WinixPurifierAccessory {
   private readonly ServiceType = this.platform.Service;
   private readonly Characteristic = this.platform.Characteristic;
 
-  private readonly device: Device;
+  readonly device: Device;
   private readonly servicesInUse: Set<Service>;
 
   private readonly purifier: Service;
@@ -40,8 +41,9 @@ export class WinixPurifierAccessory {
   ) {
     const { deviceId, deviceAlias } = accessory.context.device;
 
-    const cacheIntervalMs = (config.cacheIntervalSeconds ?? DEFAULT_CACHE_INTERVAL_SECONDS) * 1000;
-    this.device = new Device(deviceId, cacheIntervalMs, this.log);
+    const configuredSeconds = config.pollIntervalSeconds ?? DEFAULT_POLL_INTERVAL_SECONDS;
+    const pollIntervalMs = Math.max(configuredSeconds, MIN_POLL_INTERVAL_SECONDS) * 1000;
+    this.device = new Device(deviceId, pollIntervalMs, this.log);
     this.servicesInUse = new Set<Service>();
 
     const deviceSerial = override?.serialNumber ?? 'WNXAI00000000';
@@ -143,6 +145,12 @@ export class WinixPurifierAccessory {
     this.pruneUnusedServices();
   }
 
+  async initialize(): Promise<void> {
+    await this.device.initialFetch();
+    this.sendHomekitUpdate();
+    this.device.startPolling(() => this.sendHomekitUpdate());
+  }
+
   /**
    * Prune any services that are no longer in use.
    * A service would be pruned if one is initially added,
@@ -159,75 +167,64 @@ export class WinixPurifierAccessory {
     });
   }
 
-  /**
-   * Get the active state of the purifier.
-   * This maps to the Power attribute of the Winix device.
-   */
-  async getActiveState(): Promise<CharacteristicValue> {
-    const power = await this.device.getPower();
+  // Get handlers - all synchronous, return from in-memory state
+  // If the device has never been reachable, throw so HomeKit shows "No Response"
+
+  private ensureReachable(): void {
+    if (!this.device.isReachable()) {
+      throw new this.platform.HapStatusError(HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+    }
+  }
+
+  getActiveState(): CharacteristicValue {
+    this.ensureReachable();
+    const power = this.device.getPower();
     this.log.debug('accessory:getActiveState()', power);
     return this.toActiveState(power);
   }
 
-  /**
-   * Set the active state of the purifier.
-   * This maps to the Power attribute of the Winix device.
-   */
   async setActiveState(state: CharacteristicValue) {
     const power: Power = state === this.Characteristic.Active.ACTIVE ? Power.On : Power.Off;
     this.log.debug(`accessory:setActiveState(${state})`, power);
     await this.device.setPower(power);
-    await this.sendHomekitUpdate();
+    this.sendHomekitUpdate();
+    this.device.resetPollTimer();
   }
 
-  /**
-   * Get the current state of the purifier. Either purifying air or inactive.
-   * Same as power for this implementation.
-   */
-  async getCurrentState(): Promise<CharacteristicValue> {
-    const power = await this.device.getPower();
+  getCurrentState(): CharacteristicValue {
+    this.ensureReachable();
+    const power = this.device.getPower();
     this.log.debug('accessory:getCurrentState()', power);
     return this.toCurrentState(power);
   }
 
-  /**
-   * Get the target state of the purifier. Either auto or manual mode.
-   */
-  async getTargetState(): Promise<CharacteristicValue> {
-    const mode = await this.device.getMode();
+  getTargetState(): CharacteristicValue {
+    this.ensureReachable();
+    const mode = this.device.getMode();
     this.log.debug('accessory:getTargetState()', mode);
     return this.toTargetState(mode);
   }
 
-  /**
-   * Set the target state of the purifier. Either auto or manual mode.
-   */
   async setTargetState(state: CharacteristicValue): Promise<void> {
     const newMode: Mode = state === this.Characteristic.TargetAirPurifierState.AUTO ? Mode.Auto : Mode.Manual;
     this.log.debug(`accessory:setTargetState(${state})`, newMode);
     await this.device.setMode(newMode);
-
-    if (newMode === Mode.Manual) {
-      return;
-    }
-
-    // If we're switching back to auto, the airflow speed will most likely change on the Winix device itself.
-    // Pause, get the latest airflow speed, then send the update to Homekit
-    this.scheduleHomekitUpdate();
+    this.sendHomekitUpdate();
+    this.device.resetPollTimer();
   }
 
-  /**
-   * Get the rotation speed of the purifier.
-   */
-  async getRotationSpeed(): Promise<CharacteristicValue> {
-    const airflow = await this.device.getAirflow();
+  getRotationSpeed(): CharacteristicValue {
+    this.ensureReachable();
+    const power = this.device.getPower();
+    if (power === Power.Off) {
+      this.log.debug('accessory:getRotationSpeed()', 'off');
+      return 0;
+    }
+    const airflow = this.device.getAirflow();
     this.log.debug('accessory:getRotationSpeed()', airflow);
     return this.toRotationSpeed(airflow);
   }
 
-  /**
-   * Set the rotation speed of the purifier.
-   */
   async setRotationSpeed(state: CharacteristicValue): Promise<void> {
     const airflow: Airflow | null = this.toAirflow(state);
     this.log.debug(`accessory:setRotationSpeed(${state}):`, airflow);
@@ -238,65 +235,54 @@ export class WinixPurifierAccessory {
     }
 
     await this.device.setAirflow(airflow);
-    await this.sendHomekitUpdate();
+    this.sendHomekitUpdate();
+    this.device.resetPollTimer();
   }
 
-  /**
-   * Get the air quality of the purifier.
-   */
-  async getAirQuality(): Promise<CharacteristicValue> {
-    const airQuality = await this.device.getAirQuality();
+  getAirQuality(): CharacteristicValue {
+    this.ensureReachable();
+    const airQuality = this.device.getAirQuality();
     this.log.debug('accessory:getAirQuality():', airQuality);
     return this.toAirQuality(airQuality);
   }
 
-  /**
-   * Get the plasmawave state of the purifier.
-   */
-  async getPlasmawave(): Promise<CharacteristicValue> {
-    const plasmawave = await this.device.getPlasmawave();
+  getPlasmawave(): CharacteristicValue {
+    this.ensureReachable();
+    const plasmawave = this.device.getPlasmawave();
     this.log.debug('accessory:getPlasmawave():', plasmawave);
     return this.toSwitch(plasmawave);
   }
 
-  /**
-   * Set the plasmawave state of the purifier.
-   */
   async setPlasmawave(state: CharacteristicValue): Promise<void> {
     const plasmawave: Plasmawave = this.toPlasmawave(state);
     this.log.debug(`accessory:setPlasmawave(${state}):`, plasmawave);
     await this.device.setPlasmawave(plasmawave);
-    await this.sendHomekitUpdate();
+    this.sendHomekitUpdate();
+    this.device.resetPollTimer();
   }
 
-  /**
-   * Get the ambient light level of the purifier.
-   */
-  async getAmbientLight(): Promise<CharacteristicValue> {
-    const ambientLight = await this.device.getAmbientLight();
-    // Fix ambient light value under 0.0001 warning
+  getAmbientLight(): CharacteristicValue {
+    this.ensureReachable();
+    const ambientLight = this.device.getAmbientLight();
     const fixedAmbientLight = this.toAmbientLight(ambientLight);
     this.log.debug('accessory:getAmbientLight():', 'measured:', ambientLight, 'fixed:', fixedAmbientLight);
     return fixedAmbientLight;
   }
 
-  /**
-   * Get the auto switch state of the purifier.
-   */
-  async getAutoSwitchState(): Promise<CharacteristicValue> {
-    const targetState = await this.getTargetState();
-
-    // Translate target state (auto/manual mode) to auto switch state
+  getAutoSwitchState(): CharacteristicValue {
+    this.ensureReachable();
+    const power = this.device.getPower();
+    if (power === Power.Off) {
+      this.log.debug('accessory:getAutoSwitchState()', 'off');
+      return false;
+    }
+    const targetState = this.getTargetState();
     const result = targetState === this.Characteristic.TargetAirPurifierState.AUTO;
     this.log.debug('accessory:getAutoSwitchState()', 'target', targetState, 'result', result);
     return result;
   }
 
-  /**
-   * Set the auto switch state of the purifier.
-   */
   async setAutoSwitchState(state: CharacteristicValue): Promise<void> {
-    // Translate auto switch state to target state (auto/manual mode)
     const proxyState: CharacteristicValue = state ?
       this.Characteristic.TargetAirPurifierState.AUTO :
       this.Characteristic.TargetAirPurifierState.MANUAL;
@@ -305,31 +291,30 @@ export class WinixPurifierAccessory {
     return await this.setTargetState(proxyState);
   }
 
-  /**
-   * Get the sleep switch state of the purifier.
-   */
-  async getSleepSwitchState(): Promise<CharacteristicValue> {
-    const airflow = await this.device.getAirflow();
+  getSleepSwitchState(): CharacteristicValue {
+    this.ensureReachable();
+    const power = this.device.getPower();
+    if (power === Power.Off) {
+      this.log.debug('accessory:getSleepSwitchState()', 'off');
+      return false;
+    }
+    const airflow = this.device.getAirflow();
     const isInSleep = airflow === Airflow.Sleep;
     this.log.debug('accessory:getSleepSwitchState()', isInSleep);
     return isInSleep;
   }
 
-  /**
-   * Set the sleep switch state of the purifier.
-   */
   async setSleepSwitchState(state: CharacteristicValue): Promise<void> {
     const airflow: Airflow = state ? Airflow.Sleep : Airflow.Low;
     this.log.debug(`accessory:setSleepSwitchState(${state})`, airflow);
     await this.device.setAirflow(airflow);
-    this.scheduleHomekitUpdate();
+    this.sendHomekitUpdate();
+    this.device.resetPollTimer();
   }
 
-  /**
-   * Get the filter life level of the purifier.
-   */
-  async getFilterLifeLevel(): Promise<CharacteristicValue> {
-    const currentFilterHours = await this.device.getFilterHours();
+  getFilterLifeLevel(): CharacteristicValue {
+    this.ensureReachable();
+    const currentFilterHours = this.device.getFilterHours();
 
     if (currentFilterHours <= 0) {
       this.log.debug('accessory:getFilterLifeLevel(): currentFilterHours is not a positive number:', currentFilterHours);
@@ -343,11 +328,9 @@ export class WinixPurifierAccessory {
     return remainingPercentage;
   }
 
-  /**
-   * Get the filter change indication of the purifier.
-   */
-  async getFilterChangeIndication(): Promise<CharacteristicValue> {
-    const filterLife = await this.getFilterLifeLevel() as number;
+  getFilterChangeIndication(): CharacteristicValue {
+    this.ensureReachable();
+    const filterLife = this.getFilterLifeLevel() as number;
     const replacementPercentage = this.config.filterReplacementIndicatorPercentage ?? DEFAULT_FILTER_LIFE_REPLACEMENT_PERCENTAGE;
     const shouldReplaceFilter = filterLife <= replacementPercentage ?
       this.Characteristic.FilterChangeIndication.CHANGE_FILTER :
@@ -362,23 +345,14 @@ export class WinixPurifierAccessory {
     return shouldReplaceFilter;
   }
 
-  private scheduleHomekitUpdate() {
-    this.log.debug('scheduling homekit update');
-
-    setTimeout(async () => {
-      await this.device.update();
-      await this.sendHomekitUpdate();
-    }, 1000);
-  }
-
   /**
    * Send an update to Homekit with the latest device status.
    */
-  private async sendHomekitUpdate(): Promise<void> {
+  private sendHomekitUpdate(): void {
     this.log.debug('accessory:sendHomekitUpdate()');
 
-    if (!this.device.hasData()) {
-      this.log.debug('accessory:sendHomekitUpdate(): skipping update, no status');
+    if (!this.device.isReachable()) {
+      this.log.debug('accessory:sendHomekitUpdate(): skipping, device not reachable');
       return;
     }
 
@@ -389,12 +363,12 @@ export class WinixPurifierAccessory {
       airQuality,
       plasmawave,
       ambientLight,
-    } = await this.device.getState();
+    } = this.device.getState();
 
     this.purifier.updateCharacteristic(this.Characteristic.Active, this.toActiveState(power));
     this.purifier.updateCharacteristic(this.Characteristic.CurrentAirPurifierState, this.toCurrentState(power));
     this.purifier.updateCharacteristic(this.Characteristic.TargetAirPurifierState, this.toTargetState(mode));
-    this.purifier.updateCharacteristic(this.Characteristic.RotationSpeed, this.toRotationSpeed(airflow));
+    this.purifier.updateCharacteristic(this.Characteristic.RotationSpeed, power === Power.Off ? 0 : this.toRotationSpeed(airflow));
 
     if (this.airQuality !== undefined) {
       this.airQuality?.updateCharacteristic(this.Characteristic.AirQuality, this.toAirQuality(airQuality));
@@ -411,14 +385,14 @@ export class WinixPurifierAccessory {
     if (this.autoSwitch !== undefined) {
       this.autoSwitch?.updateCharacteristic(
         this.Characteristic.On,
-        this.toTargetState(mode) === this.Characteristic.TargetAirPurifierState.AUTO,
+        power === Power.On && this.toTargetState(mode) === this.Characteristic.TargetAirPurifierState.AUTO,
       );
     }
 
     if (this.sleepSwitch !== undefined) {
       this.sleepSwitch?.updateCharacteristic(
         this.Characteristic.On,
-        airflow === Airflow.Sleep,
+        power === Power.On && airflow === Airflow.Sleep,
       );
     }
   }

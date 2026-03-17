@@ -63,11 +63,9 @@
   ],
   "dependencies": {
     "@homebridge/plugin-ui-utils": "1.0.3",
-    "async-lock": "1.4.1",
     "winix-api": "1.7.0"
   },
   "devDependencies": {
-    "@types/async-lock": "1.4.2",
     "@types/node": "20.11.0",
     "@typescript-eslint/eslint-plugin": "6.18.1",
     "@typescript-eslint/parser": "6.18.1",

@@ -1,22 +1,26 @@
 import { Airflow, AirQuality, DeviceStatus, Mode, Plasmawave, Power, WinixAPI } from 'winix-api';
 import { DeviceLogger } from './logger';
-import AsyncLock from 'async-lock';
 
 export interface DeviceState extends DeviceStatus {
 }
 
+const MAX_BACKOFF_MS = 5 * 60 * 1000;
+const COMMAND_DELAY_MS = 1500;
+const UNREACHABLE_THRESHOLD = 3;
+
 export class Device {
 
-  private readonly lock: AsyncLock;
   private state: DeviceState;
-  private lastWinixPoll = -1;
+  private hasReceivedData = false;
+  private pollTimer: NodeJS.Timeout | null = null;
+  private consecutiveFailures = 0;
+  private onUpdate: (() => void) | null = null;
 
   constructor(
     private readonly deviceId: string,
-    private readonly cacheIntervalMs: number,
+    private readonly pollIntervalMs: number,
     private readonly log: DeviceLogger,
   ) {
-    this.lock = new AsyncLock({ timeout: 3000 });
     this.state = {
       power: Power.Off,
       mode: Mode.Auto,
@@ -29,46 +33,83 @@ export class Device {
   }
 
   hasData(): boolean {
-    return this.lastWinixPoll > -1;
+    return this.hasReceivedData;
   }
 
-  async getPower(): Promise<Power> {
-    await this.ensureUpdated();
+  isReachable(): boolean {
+    return this.hasReceivedData && this.consecutiveFailures < UNREACHABLE_THRESHOLD;
+  }
+
+  async initialFetch(): Promise<void> {
+    try {
+      this.log.debug('device:initialFetch()');
+      const newState = await WinixAPI.getDeviceStatus(this.deviceId);
+      Object.assign(this.state, newState);
+      this.hasReceivedData = true;
+      this.consecutiveFailures = 0;
+      this.log.debug('device:initialFetch()', JSON.stringify(this.state));
+    } catch (e: unknown) {
+      this.log.warn('device:initialFetch() failed, using defaults:', (e as Error).message);
+    }
+  }
+
+  startPolling(onUpdate: () => void): void {
+    this.onUpdate = onUpdate;
+    // Stagger the first poll with a random delay to avoid all devices
+    // hitting the API at the same time
+    const jitter = Math.floor(Math.random() * this.pollIntervalMs);
+    this.schedulePoll(jitter);
+  }
+
+  resetPollTimer(delayMs = 3000): void {
+    this.schedulePoll(delayMs);
+  }
+
+  stopPolling(): void {
+    if (this.pollTimer) {
+      clearTimeout(this.pollTimer);
+      this.pollTimer = null;
+    }
+  }
+
+  // Getters - all synchronous, return from in-memory state
+
+  getPower(): Power {
     return this.state.power;
   }
 
-  async getMode(): Promise<Mode> {
-    await this.ensureUpdated();
+  getMode(): Mode {
     return this.state.mode;
   }
 
-  async getAirflow(): Promise<Airflow> {
-    await this.ensureUpdated();
+  getAirflow(): Airflow {
     return this.state.airflow;
   }
 
-  async getAirQuality(): Promise<AirQuality> {
-    await this.ensureUpdated();
+  getAirQuality(): AirQuality {
     return this.state.airQuality;
   }
 
-  async getPlasmawave(): Promise<Plasmawave> {
-    await this.ensureUpdated();
+  getPlasmawave(): Plasmawave {
     return this.state.plasmawave;
   }
 
-  async getAmbientLight(): Promise<number> {
-    await this.ensureUpdated();
+  getAmbientLight(): number {
     return this.state.ambientLight;
   }
 
-  async getFilterHours(): Promise<number> {
-    await this.ensureUpdated();
+  getFilterHours(): number {
     return this.state.filterHours;
   }
 
+  getState(): DeviceState {
+    return { ...this.state };
+  }
+
+  // Setters - async, send commands to Winix API and update state optimistically
+
   async setPower(value: Power): Promise<void> {
-    const initialPower = await this.getPower();
+    const initialPower = this.getPower();
     if (initialPower === value) {
       this.log.debug('device:setPower(%s)', value, '(no change)');
       return;
@@ -78,18 +119,20 @@ export class Device {
     await WinixAPI.setPower(this.deviceId, value);
     this.state.power = value;
 
-    // default to auto mode when turning on from off
-    if (initialPower === Power.Off && value === Power.On) {
+    // Side effects observed from device testing
+    if (value === Power.Off) {
       this.state.mode = Mode.Auto;
+      this.state.plasmawave = Plasmawave.Off;
+    }
+    if (value === Power.On) {
+      this.state.plasmawave = Plasmawave.On;
     }
   }
 
   async setMode(value: Mode): Promise<void> {
     const turnedOn = await this.ensureOn();
 
-    // Don't try to set the mode if it's already set to the same value
-    // Fixes issues with this being set right around the time of power on
-    if (!turnedOn && value === await this.getMode()) {
+    if (!turnedOn && value === this.getMode()) {
       this.log.debug('device:setMode(%s)', value, '(no change)');
       return;
     }
@@ -97,17 +140,32 @@ export class Device {
     this.log.debug('device:setMode(%s)', value);
     await WinixAPI.setMode(this.deviceId, value);
     this.state.mode = value;
-    // default to low airflow when switching modes
-    this.state.airflow = Airflow.Low;
+
+    // Side effects observed from device testing
+    if (value === Mode.Auto) {
+      this.state.airflow = Airflow.Low;
+    }
   }
 
   async setAirflow(value: Airflow): Promise<void> {
     this.log.debug('device:setAirflow(%s)', value);
-    // Device must be on and in manual mode to set airflow
     await this.ensureOn();
-    await this.setMode(Mode.Manual);
+
+    // Device auto-switches to manual when setting airflow, but we need
+    // a delay between mode change and airflow command or the airflow
+    // command gets dropped by the device
+    if (this.state.mode !== Mode.Manual) {
+      await this.setMode(Mode.Manual);
+      await new Promise(r => setTimeout(r, COMMAND_DELAY_MS));
+    }
+
     await WinixAPI.setAirflow(this.deviceId, value);
     this.state.airflow = value;
+
+    // Side effects observed from device testing
+    if (value === Airflow.Sleep) {
+      this.state.plasmawave = Plasmawave.Off;
+    }
   }
 
   async setPlasmawave(value: Plasmawave): Promise<void> {
@@ -117,41 +175,39 @@ export class Device {
     this.state.plasmawave = value;
   }
 
-  async getState(): Promise<DeviceState> {
-    await this.ensureUpdated();
-    return {
-      power: this.state.power,
-      mode: this.state.mode,
-      airflow: this.state.airflow,
-      airQuality: this.state.airQuality,
-      plasmawave: this.state.plasmawave,
-      ambientLight: this.state.ambientLight,
-      filterHours: this.state.filterHours,
-    };
+  // Private methods
+
+  private schedulePoll(delayMs: number): void {
+    if (this.pollTimer) {
+      clearTimeout(this.pollTimer);
+    }
+    this.pollTimer = setTimeout(() => this.poll(), delayMs);
   }
 
-  async update(): Promise<void> {
-    this.log.debug('device:update()');
-    this.state = await WinixAPI.getDeviceStatus(this.deviceId);
-    this.log.debug('device:update()', JSON.stringify(this.state));
-    this.lastWinixPoll = Date.now();
-  }
-
-  private async ensureUpdated(): Promise<void> {
-    // Use a lock to ensure only one update is running at a time
-    await this.lock.acquire('update', async () => {
-      if (this.shouldUpdate()) {
-        await this.update();
-      }
-    });
-  }
-
-  private shouldUpdate(): boolean {
-    return Date.now() - this.lastWinixPoll > this.cacheIntervalMs;
+  private async poll(): Promise<void> {
+    try {
+      this.log.debug('device:poll()');
+      const newState = await WinixAPI.getDeviceStatus(this.deviceId);
+      Object.assign(this.state, newState);
+      this.hasReceivedData = true;
+      this.consecutiveFailures = 0;
+      this.log.debug('device:poll()', JSON.stringify(this.state));
+      this.onUpdate?.();
+    } catch (e: unknown) {
+      this.consecutiveFailures++;
+      const backoffMs = Math.min(
+        this.pollIntervalMs * Math.pow(2, this.consecutiveFailures),
+        MAX_BACKOFF_MS,
+      );
+      this.log.error(`device:poll() error: ${(e as Error).message} (retry in ${Math.round(backoffMs / 1000)}s)`);
+      this.schedulePoll(backoffMs);
+      return;
+    }
+    this.schedulePoll(this.pollIntervalMs);
   }
 
   private async ensureOn(): Promise<boolean> {
-    if (await this.getPower() === Power.On) {
+    if (this.state.power === Power.On) {
       this.log.debug('device:ensureOn()', 'already on');
       return false;
     }

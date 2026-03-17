@@ -117,13 +117,13 @@ export class WinixPurifierPlatform implements DynamicPlatformPlugin {
 
       if (accessory) {
         accessory.context.device = device;
-        const handler = this.createNewAccessoryHandler(accessory);
+        const handler = await this.createNewAccessoryHandler(accessory);
         this.handlers.set(uuid, handler);
         this.api.updatePlatformAccessories([accessory]);
       } else {
         accessory = new this.api.platformAccessory(device.deviceAlias, uuid, Categories.AIR_PURIFIER);
         accessory.context.device = device;
-        const handler = this.createNewAccessoryHandler(accessory);
+        const handler = await this.createNewAccessoryHandler(accessory);
         this.accessories.set(uuid, accessory);
         this.handlers.set(uuid, handler);
         accessoriesToAdd.push(accessory);
@@ -139,7 +139,7 @@ export class WinixPurifierPlatform implements DynamicPlatformPlugin {
     this.removeOldDevices(discoveredUUIDs);
   }
 
-  private createNewAccessoryHandler(accessory: PlatformAccessory<DeviceContext>): WinixPurifierAccessory {
+  private async createNewAccessoryHandler(accessory: PlatformAccessory<DeviceContext>): Promise<WinixPurifierAccessory> {
     // 🫣 suppress warning message about adding characteristics which aren't required / optional, since it isn't accurate
     this.suppressCharacteristicWarnings(accessory);
     const deviceOverride = this.deviceOverrides.get(accessory.context.device.deviceId);
@@ -147,6 +147,7 @@ export class WinixPurifierPlatform implements DynamicPlatformPlugin {
     const handler = new WinixPurifierAccessory(this, this.config, accessory, deviceOverride, log);
     this.unsuppressCharacteristicWarnings(accessory);
 
+    await handler.initialize();
     return handler;
   }
 
@@ -158,6 +159,7 @@ export class WinixPurifierPlatform implements DynamicPlatformPlugin {
       }
 
       this.log.debug('Removing old accessory:', this.logName(accessory.context.device));
+      this.handlers.get(accessory.UUID)?.device.stopPolling();
       this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
       this.accessories.delete(accessory.UUID);
       this.handlers.delete(accessory.UUID);

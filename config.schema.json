@@ -46,12 +46,12 @@
         "maximum": 100,
         "required": true
       },
-      "cacheIntervalSeconds": {
-        "title": "Winix Response Cache Interval (seconds)",
-        "description": "Time, in seconds, for how long to reuse cached responses from Winix",
+      "pollIntervalSeconds": {
+        "title": "Poll Interval (seconds)",
+        "description": "How often to poll the Winix API for device state updates",
         "type": "integer",
-        "default": 60,
-        "minimum": 0,
+        "default": 30,
+        "minimum": 15,
         "required": true
       },
       "deviceRefreshIntervalMinutes": {
@@ -166,7 +166,7 @@
         "exposeAutoSwitch",
         "exposeSleepSwitch",
         "filterReplacementIndicatorPercentage",
-        "cacheIntervalSeconds",
+        "pollIntervalSeconds",
         "deviceRefreshIntervalMinutes"
       ]
     },
