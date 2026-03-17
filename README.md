@@ -31,7 +31,7 @@
   HomeKit.
 - **Filter Management**: Exposes the remaining filter life and provides an alert when it's time to change the filter,
   configurable to trigger at a specified percentage of remaining filter life.
-- **Efficiency**: Features Winix API response caching to minimize requests and avoid rate limiting.
+- **Efficiency**: Polls the Winix API in the background on a configurable interval to minimize requests and keep state fresh.
 - **Reliability**: Automatically refreshes device list on a configurable interval to ensure devices are always
   up-to-date.
 - **Seamless Authentication**: Automatically refreshes your Winix authentication token in the background, so you no
@@ -78,7 +78,8 @@ Simply provide your Winix account credentials for automatic device discovery and
 
 <img src="./assets/link-account.gif" alt="Link Account" />
 
-### Manual Configuration
+<details>
+<summary><h3>Manual Configuration</h3></summary>
 
 While not recommended, if manual setup is required, add the following to the `platforms` section of your `config.json`:
 
@@ -144,7 +145,10 @@ While not recommended, if manual setup is required, add the following to the `pl
 | `deviceOverrides[].nameSleepSwitch`        | `"Sleep"`          | The display name of the Sleep switch. Optional.                                                                          |
 | `platform`                                 | `"WinixPurifiers"` | Must always be `"WinixPurifiers"` in order for the plugin to load this config.                                           |
 
-### Encrypting Your Password (For Manual Setup and HOOBS Users)
+</details>
+
+<details>
+<summary><h3>Encrypting Your Password (For Manual Setup and HOOBS Users)</h3></summary>
 
 If you're configuring the plugin manually or using HOOBS, you need to store your Winix password securely in the
 configuration file. To do this, you must first encrypt your password using the provided `encrypt-password` script.
@@ -189,9 +193,12 @@ The script will output your encrypted password. Copy the result and paste it int
 
 This ensures that your password is securely stored within the configuration file.
 
+</details>
+
 ## FAQ
 
-### Using HOOBS?
+<details>
+<summary><h3>Using HOOBS?</h3></summary>
 
 If you're using [HOOBS](https://hoobs.org), you can install the plugin directly from the HOOBS interface. You will not
 be able to use the custom configuration UI, since it is not supported in HOOBS. You will need to use the manual
@@ -200,6 +207,8 @@ configuration method. Please see
 details on obtaining the required `auth` values. See
 [Encrypting Your Password](#encrypting-your-password-for-manual-setup-and-hoobs-users) for instructions on encrypting
 your Winix password.
+
+</details>
 
 ### Missing “Auto/Manual” switch in Home app?
 
