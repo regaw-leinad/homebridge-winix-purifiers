@@ -342,4 +342,158 @@ describe('Device', () => {
       expect(device.getPlasmawave()).toBe(Plasmawave.Off);
     });
   });
+
+  describe('optional DeviceStatus fields', () => {
+    // winix-api 1.8.0 made airQuality, plasmawave, and ambientLight optional
+    // on DeviceStatus since not all device models report them. The Device class
+    // initializes these with defaults, and Object.assign only overwrites keys
+    // present in the API response, so the defaults should survive.
+
+    // Minimal status: only the required fields from DeviceStatus
+    const requiredFieldsOnly = {
+      power: Power.On,
+      mode: Mode.Auto,
+      airflow: Airflow.Low,
+      filterHours: 500,
+    };
+
+    describe('initialFetch with missing optional fields', () => {
+      it('should preserve all defaults when API returns only required fields', async () => {
+        vi.mocked(WinixAPI.getDeviceStatus).mockResolvedValue(requiredFieldsOnly);
+        await device.initialFetch();
+
+        expect(device.getAirQuality()).toBe(AirQuality.Good);
+        expect(device.getPlasmawave()).toBe(Plasmawave.Off);
+        expect(device.getAmbientLight()).toBe(0);
+        // Required fields should be updated
+        expect(device.getPower()).toBe(Power.On);
+        expect(device.getFilterHours()).toBe(500);
+      });
+
+      it('should handle only airQuality present', async () => {
+        vi.mocked(WinixAPI.getDeviceStatus).mockResolvedValue({
+          ...requiredFieldsOnly,
+          airQuality: AirQuality.Poor,
+        });
+        await device.initialFetch();
+
+        expect(device.getAirQuality()).toBe(AirQuality.Poor);
+        expect(device.getPlasmawave()).toBe(Plasmawave.Off);
+        expect(device.getAmbientLight()).toBe(0);
+      });
+
+      it('should handle only plasmawave present', async () => {
+        vi.mocked(WinixAPI.getDeviceStatus).mockResolvedValue({
+          ...requiredFieldsOnly,
+          plasmawave: Plasmawave.On,
+        });
+        await device.initialFetch();
+
+        expect(device.getAirQuality()).toBe(AirQuality.Good);
+        expect(device.getPlasmawave()).toBe(Plasmawave.On);
+        expect(device.getAmbientLight()).toBe(0);
+      });
+
+      it('should handle only ambientLight present', async () => {
+        vi.mocked(WinixAPI.getDeviceStatus).mockResolvedValue({
+          ...requiredFieldsOnly,
+          ambientLight: 200,
+        });
+        await device.initialFetch();
+
+        expect(device.getAirQuality()).toBe(AirQuality.Good);
+        expect(device.getPlasmawave()).toBe(Plasmawave.Off);
+        expect(device.getAmbientLight()).toBe(200);
+      });
+
+      it('should handle all optional fields present', async () => {
+        vi.mocked(WinixAPI.getDeviceStatus).mockResolvedValue({
+          ...requiredFieldsOnly,
+          airQuality: AirQuality.Fair,
+          plasmawave: Plasmawave.On,
+          ambientLight: 300,
+        });
+        await device.initialFetch();
+
+        expect(device.getAirQuality()).toBe(AirQuality.Fair);
+        expect(device.getPlasmawave()).toBe(Plasmawave.On);
+        expect(device.getAmbientLight()).toBe(300);
+      });
+    });
+
+    describe('polling transitions between full and partial status', () => {
+      it('should retain last known values when optional fields disappear', async () => {
+        vi.mocked(WinixAPI.getDeviceStatus).mockResolvedValue(mockStatus);
+        await device.initialFetch();
+
+        expect(device.getPlasmawave()).toBe(Plasmawave.On);
+        expect(device.getAmbientLight()).toBe(150);
+
+        // Poll returns only required fields
+        vi.mocked(WinixAPI.getDeviceStatus).mockResolvedValue(requiredFieldsOnly);
+        device.startPolling(vi.fn());
+        await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
+
+        // Last known values should persist
+        expect(device.getAirQuality()).toBe(AirQuality.Good);
+        expect(device.getPlasmawave()).toBe(Plasmawave.On);
+        expect(device.getAmbientLight()).toBe(150);
+      });
+
+      it('should update when optional fields reappear after being absent', async () => {
+        vi.mocked(WinixAPI.getDeviceStatus).mockResolvedValue(requiredFieldsOnly);
+        await device.initialFetch();
+
+        // Poll returns full status
+        vi.mocked(WinixAPI.getDeviceStatus).mockResolvedValue({
+          ...requiredFieldsOnly,
+          airQuality: AirQuality.Poor,
+          plasmawave: Plasmawave.On,
+          ambientLight: 250,
+        });
+        device.startPolling(vi.fn());
+        await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
+
+        expect(device.getAirQuality()).toBe(AirQuality.Poor);
+        expect(device.getPlasmawave()).toBe(Plasmawave.On);
+        expect(device.getAmbientLight()).toBe(250);
+      });
+
+      it('should handle optional fields changing values across polls', async () => {
+        vi.mocked(WinixAPI.getDeviceStatus).mockResolvedValue({
+          ...requiredFieldsOnly,
+          airQuality: AirQuality.Good,
+        });
+        await device.initialFetch();
+        expect(device.getAirQuality()).toBe(AirQuality.Good);
+
+        vi.mocked(WinixAPI.getDeviceStatus).mockResolvedValue({
+          ...requiredFieldsOnly,
+          airQuality: AirQuality.Fair,
+        });
+        device.startPolling(vi.fn());
+        await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
+        expect(device.getAirQuality()).toBe(AirQuality.Fair);
+
+        vi.mocked(WinixAPI.getDeviceStatus).mockResolvedValue({
+          ...requiredFieldsOnly,
+          airQuality: AirQuality.Poor,
+        });
+        await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
+        expect(device.getAirQuality()).toBe(AirQuality.Poor);
+      });
+    });
+
+    describe('getState with optional fields', () => {
+      it('should include defaults for missing optional fields in state copy', async () => {
+        vi.mocked(WinixAPI.getDeviceStatus).mockResolvedValue(requiredFieldsOnly);
+        await device.initialFetch();
+
+        const state = device.getState();
+        expect(state.airQuality).toBe(AirQuality.Good);
+        expect(state.plasmawave).toBe(Plasmawave.Off);
+        expect(state.ambientLight).toBe(0);
+      });
+    });
+  });
 });
