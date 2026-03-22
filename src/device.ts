@@ -2,6 +2,12 @@ import { Airflow, AirQuality, DeviceStatus, Mode, Plasmawave, Power, WinixAPI } 
 import { DeviceLogger } from './logger';
 
 export interface DeviceState extends DeviceStatus {
+  // These fields are optional in DeviceStatus (model-dependent), but the plugin
+  // always initializes them with defaults, and Object.assign only overwrites keys
+  // present in the API response, so they are guaranteed to be defined here.
+  airQuality: AirQuality;
+  plasmawave: Plasmawave;
+  ambientLight: number;
 }
 
 const MAX_BACKOFF_MS = 5 * 60 * 1000;
