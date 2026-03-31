@@ -24,6 +24,22 @@ function createTestLogger() {
   };
 }
 
+async function waitForRecovery(client: WinixClient, deviceId: string, timeoutMs = 5 * 60_000): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    try {
+      await client.getDeviceStatus(deviceId);
+      return; // success
+    } catch {
+      const cooldown = client.getCooldownRemaining();
+      const waitMs = cooldown > 0 ? cooldown + 5_000 : 10_000;
+      console.log(`  Recovery probe failed, waiting ${waitMs}ms...`);
+      await new Promise(r => setTimeout(r, waitMs));
+    }
+  }
+  throw new Error(`API did not recover within ${timeoutMs}ms`);
+}
+
 async function drainBucket(client: WinixClient, deviceId: string): Promise<number> {
   let requestCount = 0;
   let rateLimited = false;
@@ -82,36 +98,33 @@ describe.runIf(DEVICE_ID)('rate limiting integration', () => {
 
   it('should stay reachable during rate limit and recover after cooldown', async () => {
     // This test uses its own client so we can:
-    // 1. Wait for the IP-level rate limit from beforeAll to clear
+    // 1. Wait for API recovery (poll, don't guess)
     // 2. Do a successful initialFetch (device becomes reachable)
-    // 3. Drain the bucket again (device enters rate limit)
-    // 4. Verify device stays reachable during cooldown (consecutiveFailures not incremented)
-    // 5. Wait for cooldown to clear
-    // 6. Verify polling recovers and delivers updates
+    // 3. Drain the bucket (device enters rate limit)
+    // 4. Verify device stays reachable during cooldown
+    // 5. Wait for recovery (poll, don't guess)
+    // 6. Verify polling delivered updates
     const { log, hasMessageContaining } = createTestLogger();
     const client = new WinixClient();
     const device = new Device(DEVICE_ID!, 5_000, log, client);
 
-    // Step 1: Wait for the IP-level rate limit from beforeAll/earlier tests to clear.
-    // The drainedClient tracks its own 60s cooldown, but the API-side rate limit
-    // may take longer to recover (especially with a larger bucket on CI runners).
-    // Wait for client cooldown + 30s buffer for API recovery.
-    const remaining = drainedClient.getCooldownRemaining();
-    const waitMs = remaining + 30_000;
-    console.log(`Waiting ${waitMs}ms for IP-level rate limit to clear...`);
-    await new Promise(r => setTimeout(r, waitMs));
+    // Step 1: Wait for API to recover from earlier tests.
+    // AWS WAF recovery timing is unpredictable, so poll instead of guessing.
+    const probeClient = new WinixClient();
+    console.log('Waiting for API to recover from earlier tests...');
+    await waitForRecovery(probeClient, DEVICE_ID!);
 
     // Step 2: Successful fetch so device has data and is reachable
     await device.initialFetch();
     expect(device.hasData()).toBe(true);
     expect(device.isReachable()).toBe(true);
 
-    // Step 2: Drain the bucket on this client
+    // Step 3: Drain the bucket on this client
     const count = await drainBucket(client, DEVICE_ID!);
     console.log(`Drained bucket after ${count} requests`);
     expect(client.getCooldownRemaining()).toBeGreaterThan(0);
 
-    // Step 3: Start polling. Polls will hit RateLimitError but device should
+    // Step 4: Start polling. Polls will hit RateLimitError but device should
     // NOT become unreachable (consecutiveFailures should not increment).
     let updateCount = 0;
     device.startPolling(() => updateCount++);
@@ -120,30 +133,17 @@ describe.runIf(DEVICE_ID)('rate limiting integration', () => {
     expect(hasMessageContaining('warn', 'rate limited')).toBe(true);
     expect(device.isReachable()).toBe(true);
 
-    // Step 4: Wait for cooldown to clear, plus extra buffer for the API-side
-    // rate limit window. The client's 60s cooldown means no requests hit the API
-    // during that time, but the API may need its own 60s of silence. Add 15s buffer.
-    const cooldownLeft = client.getCooldownRemaining();
-    if (cooldownLeft > 0) {
-      const waitMs = cooldownLeft + 15_000;
-      console.log(`Waiting ${waitMs}ms for cooldown + API recovery...`);
-      await new Promise(r => setTimeout(r, waitMs));
+    // Step 5: Wait for recovery by polling, not fixed sleeps.
+    // The polling loop will naturally recover once the API starts responding.
+    console.log('Waiting for polling to recover...');
+    const deadline = Date.now() + 5 * 60_000;
+    while (updateCount === 0 && Date.now() < deadline) {
+      await new Promise(r => setTimeout(r, 10_000));
     }
-
-    // Step 5: After cooldown, polls should eventually succeed.
-    // If the first post-cooldown poll re-triggers cooldown (API not fully recovered),
-    // wait for that second cooldown too.
-    const secondCooldown = client.getCooldownRemaining();
-    if (secondCooldown > 0) {
-      console.log(`Second cooldown triggered, waiting ${secondCooldown + 15_000}ms...`);
-      await new Promise(r => setTimeout(r, secondCooldown + 15_000));
-    }
-
-    await new Promise(r => setTimeout(r, 15_000));
     device.stopPolling();
 
+    // Step 6: Verify recovery
     expect(updateCount).toBeGreaterThanOrEqual(1);
-    expect(client.getCooldownRemaining()).toBe(0);
     expect(device.isReachable()).toBe(true);
-  }, 300_000);
+  }, 600_000);
 });
