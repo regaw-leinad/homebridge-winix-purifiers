@@ -93,12 +93,13 @@ describe.runIf(DEVICE_ID)('rate limiting integration', () => {
     const device = new Device(DEVICE_ID!, 5_000, log, client);
 
     // Step 1: Wait for the IP-level rate limit from beforeAll/earlier tests to clear.
-    // The drainedClient tracks its own cooldown, but the IP-level limit is shared.
+    // The drainedClient tracks its own 60s cooldown, but the API-side rate limit
+    // may take longer to recover (especially with a larger bucket on CI runners).
+    // Wait for client cooldown + 30s buffer for API recovery.
     const remaining = drainedClient.getCooldownRemaining();
-    if (remaining > 0) {
-      console.log(`Waiting ${remaining + 5000}ms for IP-level rate limit to clear...`);
-      await new Promise(r => setTimeout(r, remaining + 5_000));
-    }
+    const waitMs = remaining + 30_000;
+    console.log(`Waiting ${waitMs}ms for IP-level rate limit to clear...`);
+    await new Promise(r => setTimeout(r, waitMs));
 
     // Step 2: Successful fetch so device has data and is reachable
     await device.initialFetch();
