@@ -46,7 +46,7 @@ export class WinixPurifierAccessory {
     const minForDeviceCount = deviceCount * 10;
     const effectiveSeconds = Math.max(configuredSeconds, MIN_POLL_INTERVAL_SECONDS, minForDeviceCount);
     if (effectiveSeconds > configuredSeconds) {
-      this.log.info(`Poll interval scaled to ${effectiveSeconds}s for ${deviceCount} device(s) (configured: ${configuredSeconds}s)`);
+      this.log.info(`Poll interval adjusted from ${configuredSeconds}s to ${effectiveSeconds}s to avoid Winix API rate limiting with ${deviceCount} device(s)`);
     }
     const pollIntervalMs = effectiveSeconds * 1000;
     this.device = new Device(deviceId, pollIntervalMs, this.log, this.platform.client);
