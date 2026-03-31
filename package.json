@@ -37,6 +37,8 @@
     "ci:ui": "yarn --cwd ./src/homebridge-ui/ui --frozen-lockfile",
     "clean": "rm -rf ./dist && rm -rf ./src/homebridge-ui/ui/dist",
     "encrypt-password": "ts-node ./script/encrypt-password.ts",
+    "test:rate-limit": "tsc -p ./script/tsconfig.json && node dist/script/test-rate-limit.js",
+    "test:rate-limit-deep": "tsc -p ./script/tsconfig.json && node dist/script/test-rate-limit-deep.js",
     "install:ui": "yarn --cwd ./src/homebridge-ui/ui",
     "lint": "yarn lint:server && yarn lint:ui",
     "lint:server": "eslint ./src/**.ts --max-warnings=0",
@@ -63,7 +65,7 @@
   ],
   "dependencies": {
     "@homebridge/plugin-ui-utils": "1.0.3",
-    "winix-api": "1.8.0"
+    "winix-api": "1.9.0"
   },
   "devDependencies": {
     "@types/node": "20.11.0",

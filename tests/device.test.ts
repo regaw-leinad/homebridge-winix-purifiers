@@ -1,21 +1,33 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { Airflow, AirQuality, Mode, Plasmawave, Power, WinixAPI } from 'winix-api';
+import { Airflow, AirQuality, Mode, Plasmawave, Power, WinixClient, RateLimitError } from 'winix-api';
 import { Device } from '../src/device';
 
-vi.mock('winix-api', () => ({
-  WinixAPI: {
+vi.mock('winix-api', async () => {
+  const enums = {
+    Power: { Off: '0', On: '1' },
+    Mode: { Auto: '01', Manual: '02' },
+    Airflow: { Low: '01', Medium: '02', High: '03', Turbo: '05', Sleep: '06' },
+    AirQuality: { Good: '01', Fair: '02', Poor: '03' },
+    Plasmawave: { Off: '0', On: '1' },
+  };
+
+  class RateLimitError extends Error {
+    constructor() {
+      super('Rate limited by Winix API');
+      this.name = 'RateLimitError';
+    }
+  }
+
+  const WinixClient = vi.fn().mockImplementation(() => ({
     getDeviceStatus: vi.fn(),
     setPower: vi.fn(),
     setMode: vi.fn(),
     setAirflow: vi.fn(),
     setPlasmawave: vi.fn(),
-  },
-  Power: { Off: '0', On: '1' },
-  Mode: { Auto: '01', Manual: '02' },
-  Airflow: { Low: '01', Medium: '02', High: '03', Turbo: '05', Sleep: '06' },
-  AirQuality: { Good: '01', Fair: '02', Poor: '03' },
-  Plasmawave: { Off: '0', On: '1' },
-}));
+  }));
+
+  return { ...enums, WinixClient, RateLimitError };
+});
 
 const mockLog = {
   debug: vi.fn(),
@@ -39,11 +51,13 @@ const mockStatus = {
 
 describe('Device', () => {
   let device: Device;
+  let client: InstanceType<typeof WinixClient>;
 
   beforeEach(() => {
     vi.useFakeTimers();
     vi.clearAllMocks();
-    device = new Device(DEVICE_ID, POLL_INTERVAL_MS, mockLog);
+    client = new WinixClient();
+    device = new Device(DEVICE_ID, POLL_INTERVAL_MS, mockLog, client);
   });
 
   afterEach(() => {
@@ -66,7 +80,7 @@ describe('Device', () => {
 
   describe('initialFetch', () => {
     it('should update state on success', async () => {
-      vi.mocked(WinixAPI.getDeviceStatus).mockResolvedValue(mockStatus);
+      vi.mocked(client.getDeviceStatus).mockResolvedValue(mockStatus);
       await device.initialFetch();
 
       expect(device.hasData()).toBe(true);
@@ -77,7 +91,7 @@ describe('Device', () => {
     });
 
     it('should keep defaults on failure', async () => {
-      vi.mocked(WinixAPI.getDeviceStatus).mockRejectedValue(new Error('network error'));
+      vi.mocked(client.getDeviceStatus).mockRejectedValue(new Error('network error'));
       await device.initialFetch();
 
       expect(device.hasData()).toBe(false);
@@ -88,17 +102,17 @@ describe('Device', () => {
 
   describe('synchronous getters', () => {
     it('should return state without calling the API', async () => {
-      vi.mocked(WinixAPI.getDeviceStatus).mockResolvedValue(mockStatus);
+      vi.mocked(client.getDeviceStatus).mockResolvedValue(mockStatus);
       await device.initialFetch();
       vi.clearAllMocks();
 
       const state = device.getState();
       expect(state.power).toBe(Power.On);
-      expect(WinixAPI.getDeviceStatus).not.toHaveBeenCalled();
+      expect(client.getDeviceStatus).not.toHaveBeenCalled();
     });
 
     it('should return a copy of state', async () => {
-      vi.mocked(WinixAPI.getDeviceStatus).mockResolvedValue(mockStatus);
+      vi.mocked(client.getDeviceStatus).mockResolvedValue(mockStatus);
       await device.initialFetch();
 
       const state1 = device.getState();
@@ -111,12 +125,12 @@ describe('Device', () => {
   describe('polling', () => {
     it('should poll on interval and call onUpdate', async () => {
       const onUpdate = vi.fn();
-      vi.mocked(WinixAPI.getDeviceStatus).mockResolvedValue(mockStatus);
+      vi.mocked(client.getDeviceStatus).mockResolvedValue(mockStatus);
 
       device.startPolling(onUpdate);
 
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
-      expect(WinixAPI.getDeviceStatus).toHaveBeenCalledWith(DEVICE_ID);
+      expect(client.getDeviceStatus).toHaveBeenCalledWith(DEVICE_ID);
       expect(onUpdate).toHaveBeenCalledTimes(1);
 
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
@@ -125,7 +139,7 @@ describe('Device', () => {
 
     it('should use exponential backoff on failure', async () => {
       const onUpdate = vi.fn();
-      vi.mocked(WinixAPI.getDeviceStatus).mockRejectedValue(new Error('offline'));
+      vi.mocked(client.getDeviceStatus).mockRejectedValue(new Error('offline'));
 
       device.startPolling(onUpdate);
 
@@ -136,18 +150,18 @@ describe('Device', () => {
 
       // Backoff: 30000 * 2^1 = 60000ms
       await vi.advanceTimersByTimeAsync(60000);
-      expect(WinixAPI.getDeviceStatus).toHaveBeenCalledTimes(2);
+      expect(client.getDeviceStatus).toHaveBeenCalledTimes(2);
 
       // Backoff: 30000 * 2^2 = 120000ms
       await vi.advanceTimersByTimeAsync(120000);
-      expect(WinixAPI.getDeviceStatus).toHaveBeenCalledTimes(3);
+      expect(client.getDeviceStatus).toHaveBeenCalledTimes(3);
     });
 
     it('should keep last known state on poll failure', async () => {
-      vi.mocked(WinixAPI.getDeviceStatus).mockResolvedValue(mockStatus);
+      vi.mocked(client.getDeviceStatus).mockResolvedValue(mockStatus);
       await device.initialFetch();
 
-      vi.mocked(WinixAPI.getDeviceStatus).mockRejectedValue(new Error('offline'));
+      vi.mocked(client.getDeviceStatus).mockRejectedValue(new Error('offline'));
       device.startPolling(vi.fn());
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
 
@@ -156,11 +170,11 @@ describe('Device', () => {
     });
 
     it('should become unreachable after consecutive failures', async () => {
-      vi.mocked(WinixAPI.getDeviceStatus).mockResolvedValue(mockStatus);
+      vi.mocked(client.getDeviceStatus).mockResolvedValue(mockStatus);
       await device.initialFetch();
       expect(device.isReachable()).toBe(true);
 
-      vi.mocked(WinixAPI.getDeviceStatus).mockRejectedValue(new Error('offline'));
+      vi.mocked(client.getDeviceStatus).mockRejectedValue(new Error('offline'));
       device.startPolling(vi.fn());
 
       // 1st failure
@@ -177,10 +191,10 @@ describe('Device', () => {
     });
 
     it('should become reachable again after recovery', async () => {
-      vi.mocked(WinixAPI.getDeviceStatus).mockResolvedValue(mockStatus);
+      vi.mocked(client.getDeviceStatus).mockResolvedValue(mockStatus);
       await device.initialFetch();
 
-      vi.mocked(WinixAPI.getDeviceStatus).mockRejectedValue(new Error('offline'));
+      vi.mocked(client.getDeviceStatus).mockRejectedValue(new Error('offline'));
       device.startPolling(vi.fn());
 
       // Fail 3 times to become unreachable
@@ -190,7 +204,7 @@ describe('Device', () => {
       expect(device.isReachable()).toBe(false);
 
       // Recover
-      vi.mocked(WinixAPI.getDeviceStatus).mockResolvedValue(mockStatus);
+      vi.mocked(client.getDeviceStatus).mockResolvedValue(mockStatus);
       await vi.advanceTimersByTimeAsync(240000); // backoff: 240s
       expect(device.isReachable()).toBe(true);
     });
@@ -199,12 +213,12 @@ describe('Device', () => {
       const onUpdate = vi.fn();
 
       // Fail first
-      vi.mocked(WinixAPI.getDeviceStatus).mockRejectedValue(new Error('offline'));
+      vi.mocked(client.getDeviceStatus).mockRejectedValue(new Error('offline'));
       device.startPolling(onUpdate);
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
 
       // Succeed on next
-      vi.mocked(WinixAPI.getDeviceStatus).mockResolvedValue(mockStatus);
+      vi.mocked(client.getDeviceStatus).mockResolvedValue(mockStatus);
       await vi.advanceTimersByTimeAsync(60000); // backoff delay
       expect(onUpdate).toHaveBeenCalledTimes(1);
 
@@ -216,7 +230,7 @@ describe('Device', () => {
 
   describe('resetPollTimer', () => {
     it('should schedule a poll after the specified delay', async () => {
-      vi.mocked(WinixAPI.getDeviceStatus).mockResolvedValue(mockStatus);
+      vi.mocked(client.getDeviceStatus).mockResolvedValue(mockStatus);
       const onUpdate = vi.fn();
       device.startPolling(onUpdate);
 
@@ -228,7 +242,7 @@ describe('Device', () => {
 
   describe('stopPolling', () => {
     it('should stop the poll timer', async () => {
-      vi.mocked(WinixAPI.getDeviceStatus).mockResolvedValue(mockStatus);
+      vi.mocked(client.getDeviceStatus).mockResolvedValue(mockStatus);
       const onUpdate = vi.fn();
       device.startPolling(onUpdate);
 
@@ -241,18 +255,18 @@ describe('Device', () => {
   describe('setPower', () => {
     it('should call API and update state', async () => {
       await device.setPower(Power.On);
-      expect(WinixAPI.setPower).toHaveBeenCalledWith(DEVICE_ID, Power.On);
+      expect(client.setPower).toHaveBeenCalledWith(DEVICE_ID, Power.On);
       expect(device.getPower()).toBe(Power.On);
     });
 
     it('should skip if no change', async () => {
       expect(device.getPower()).toBe(Power.Off);
       await device.setPower(Power.Off);
-      expect(WinixAPI.setPower).not.toHaveBeenCalled();
+      expect(client.setPower).not.toHaveBeenCalled();
     });
 
     it('should reset mode and plasmawave on power off', async () => {
-      vi.mocked(WinixAPI.getDeviceStatus).mockResolvedValue(mockStatus);
+      vi.mocked(client.getDeviceStatus).mockResolvedValue(mockStatus);
       await device.initialFetch();
 
       await device.setPower(Power.Off);
@@ -269,14 +283,14 @@ describe('Device', () => {
   describe('setMode', () => {
     beforeEach(async () => {
       // Start with device on
-      vi.mocked(WinixAPI.getDeviceStatus).mockResolvedValue(mockStatus);
+      vi.mocked(client.getDeviceStatus).mockResolvedValue(mockStatus);
       await device.initialFetch();
       vi.clearAllMocks();
     });
 
     it('should call API and update state', async () => {
       await device.setMode(Mode.Manual);
-      expect(WinixAPI.setMode).toHaveBeenCalledWith(DEVICE_ID, Mode.Manual);
+      expect(client.setMode).toHaveBeenCalledWith(DEVICE_ID, Mode.Manual);
       expect(device.getMode()).toBe(Mode.Manual);
     });
 
@@ -291,7 +305,7 @@ describe('Device', () => {
 
   describe('setAirflow', () => {
     beforeEach(async () => {
-      vi.mocked(WinixAPI.getDeviceStatus).mockResolvedValue({
+      vi.mocked(client.getDeviceStatus).mockResolvedValue({
         ...mockStatus,
         mode: Mode.Manual,
       });
@@ -301,15 +315,15 @@ describe('Device', () => {
 
     it('should call API and update state when already in manual', async () => {
       await device.setAirflow(Airflow.High);
-      expect(WinixAPI.setAirflow).toHaveBeenCalledWith(DEVICE_ID, Airflow.High);
+      expect(client.setAirflow).toHaveBeenCalledWith(DEVICE_ID, Airflow.High);
       expect(device.getAirflow()).toBe(Airflow.High);
       // Should not have called setMode since already manual
-      expect(WinixAPI.setMode).not.toHaveBeenCalled();
+      expect(client.setMode).not.toHaveBeenCalled();
     });
 
     it('should switch to manual mode with delay before setting airflow', async () => {
       // Set device to auto mode
-      vi.mocked(WinixAPI.getDeviceStatus).mockResolvedValue(mockStatus); // auto mode
+      vi.mocked(client.getDeviceStatus).mockResolvedValue(mockStatus); // auto mode
       await device.initialFetch();
       vi.clearAllMocks();
 
@@ -319,8 +333,8 @@ describe('Device', () => {
       await vi.advanceTimersByTimeAsync(1500);
       await setAirflowPromise;
 
-      expect(WinixAPI.setMode).toHaveBeenCalledWith(DEVICE_ID, Mode.Manual);
-      expect(WinixAPI.setAirflow).toHaveBeenCalledWith(DEVICE_ID, Airflow.High);
+      expect(client.setMode).toHaveBeenCalledWith(DEVICE_ID, Mode.Manual);
+      expect(client.setAirflow).toHaveBeenCalledWith(DEVICE_ID, Airflow.High);
     });
 
     it('should set plasmawave off when setting sleep', async () => {
@@ -331,14 +345,14 @@ describe('Device', () => {
 
   describe('setPlasmawave', () => {
     beforeEach(async () => {
-      vi.mocked(WinixAPI.getDeviceStatus).mockResolvedValue(mockStatus);
+      vi.mocked(client.getDeviceStatus).mockResolvedValue(mockStatus);
       await device.initialFetch();
       vi.clearAllMocks();
     });
 
     it('should call API and update state', async () => {
       await device.setPlasmawave(Plasmawave.Off);
-      expect(WinixAPI.setPlasmawave).toHaveBeenCalledWith(DEVICE_ID, Plasmawave.Off);
+      expect(client.setPlasmawave).toHaveBeenCalledWith(DEVICE_ID, Plasmawave.Off);
       expect(device.getPlasmawave()).toBe(Plasmawave.Off);
     });
   });
@@ -359,7 +373,7 @@ describe('Device', () => {
 
     describe('initialFetch with missing optional fields', () => {
       it('should preserve all defaults when API returns only required fields', async () => {
-        vi.mocked(WinixAPI.getDeviceStatus).mockResolvedValue(requiredFieldsOnly);
+        vi.mocked(client.getDeviceStatus).mockResolvedValue(requiredFieldsOnly);
         await device.initialFetch();
 
         expect(device.getAirQuality()).toBe(AirQuality.Good);
@@ -371,7 +385,7 @@ describe('Device', () => {
       });
 
       it('should handle only airQuality present', async () => {
-        vi.mocked(WinixAPI.getDeviceStatus).mockResolvedValue({
+        vi.mocked(client.getDeviceStatus).mockResolvedValue({
           ...requiredFieldsOnly,
           airQuality: AirQuality.Poor,
         });
@@ -383,7 +397,7 @@ describe('Device', () => {
       });
 
       it('should handle only plasmawave present', async () => {
-        vi.mocked(WinixAPI.getDeviceStatus).mockResolvedValue({
+        vi.mocked(client.getDeviceStatus).mockResolvedValue({
           ...requiredFieldsOnly,
           plasmawave: Plasmawave.On,
         });
@@ -395,7 +409,7 @@ describe('Device', () => {
       });
 
       it('should handle only ambientLight present', async () => {
-        vi.mocked(WinixAPI.getDeviceStatus).mockResolvedValue({
+        vi.mocked(client.getDeviceStatus).mockResolvedValue({
           ...requiredFieldsOnly,
           ambientLight: 200,
         });
@@ -407,7 +421,7 @@ describe('Device', () => {
       });
 
       it('should handle all optional fields present', async () => {
-        vi.mocked(WinixAPI.getDeviceStatus).mockResolvedValue({
+        vi.mocked(client.getDeviceStatus).mockResolvedValue({
           ...requiredFieldsOnly,
           airQuality: AirQuality.Fair,
           plasmawave: Plasmawave.On,
@@ -423,14 +437,14 @@ describe('Device', () => {
 
     describe('polling transitions between full and partial status', () => {
       it('should retain last known values when optional fields disappear', async () => {
-        vi.mocked(WinixAPI.getDeviceStatus).mockResolvedValue(mockStatus);
+        vi.mocked(client.getDeviceStatus).mockResolvedValue(mockStatus);
         await device.initialFetch();
 
         expect(device.getPlasmawave()).toBe(Plasmawave.On);
         expect(device.getAmbientLight()).toBe(150);
 
         // Poll returns only required fields
-        vi.mocked(WinixAPI.getDeviceStatus).mockResolvedValue(requiredFieldsOnly);
+        vi.mocked(client.getDeviceStatus).mockResolvedValue(requiredFieldsOnly);
         device.startPolling(vi.fn());
         await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
 
@@ -441,11 +455,11 @@ describe('Device', () => {
       });
 
       it('should update when optional fields reappear after being absent', async () => {
-        vi.mocked(WinixAPI.getDeviceStatus).mockResolvedValue(requiredFieldsOnly);
+        vi.mocked(client.getDeviceStatus).mockResolvedValue(requiredFieldsOnly);
         await device.initialFetch();
 
         // Poll returns full status
-        vi.mocked(WinixAPI.getDeviceStatus).mockResolvedValue({
+        vi.mocked(client.getDeviceStatus).mockResolvedValue({
           ...requiredFieldsOnly,
           airQuality: AirQuality.Poor,
           plasmawave: Plasmawave.On,
@@ -460,14 +474,14 @@ describe('Device', () => {
       });
 
       it('should handle optional fields changing values across polls', async () => {
-        vi.mocked(WinixAPI.getDeviceStatus).mockResolvedValue({
+        vi.mocked(client.getDeviceStatus).mockResolvedValue({
           ...requiredFieldsOnly,
           airQuality: AirQuality.Good,
         });
         await device.initialFetch();
         expect(device.getAirQuality()).toBe(AirQuality.Good);
 
-        vi.mocked(WinixAPI.getDeviceStatus).mockResolvedValue({
+        vi.mocked(client.getDeviceStatus).mockResolvedValue({
           ...requiredFieldsOnly,
           airQuality: AirQuality.Fair,
         });
@@ -475,7 +489,7 @@ describe('Device', () => {
         await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
         expect(device.getAirQuality()).toBe(AirQuality.Fair);
 
-        vi.mocked(WinixAPI.getDeviceStatus).mockResolvedValue({
+        vi.mocked(client.getDeviceStatus).mockResolvedValue({
           ...requiredFieldsOnly,
           airQuality: AirQuality.Poor,
         });
@@ -486,7 +500,7 @@ describe('Device', () => {
 
     describe('getState with optional fields', () => {
       it('should include defaults for missing optional fields in state copy', async () => {
-        vi.mocked(WinixAPI.getDeviceStatus).mockResolvedValue(requiredFieldsOnly);
+        vi.mocked(client.getDeviceStatus).mockResolvedValue(requiredFieldsOnly);
         await device.initialFetch();
 
         const state = device.getState();
@@ -494,6 +508,82 @@ describe('Device', () => {
         expect(state.plasmawave).toBe(Plasmawave.Off);
         expect(state.ambientLight).toBe(0);
       });
+    });
+  });
+
+  describe('rate limiting', () => {
+    it('should not increment consecutiveFailures on RateLimitError during poll', async () => {
+      vi.mocked(client.getDeviceStatus).mockResolvedValue(mockStatus);
+      await device.initialFetch();
+      expect(device.isReachable()).toBe(true);
+
+      vi.mocked(client.getDeviceStatus).mockRejectedValue(new RateLimitError());
+      device.startPolling(vi.fn());
+
+      // Fail 3+ times with rate limit — should stay reachable
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
+
+      expect(device.isReachable()).toBe(true);
+      expect(mockLog.warn).toHaveBeenCalledWith(expect.stringContaining('rate limited'));
+    });
+
+    it('should retry at normal interval on RateLimitError (no backoff)', async () => {
+      vi.mocked(client.getDeviceStatus).mockResolvedValue(mockStatus);
+      await device.initialFetch();
+
+      vi.mocked(client.getDeviceStatus).mockRejectedValue(new RateLimitError());
+      const onUpdate = vi.fn();
+      device.startPolling(onUpdate);
+
+      // First poll — rate limited
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
+      expect(client.getDeviceStatus).toHaveBeenCalledTimes(2); // initialFetch + 1 poll
+
+      // Should retry at normal interval, not exponential backoff
+      vi.mocked(client.getDeviceStatus).mockResolvedValue(mockStatus);
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
+      expect(onUpdate).toHaveBeenCalledTimes(1);
+    });
+
+    it('should recover after rate limit clears', async () => {
+      vi.mocked(client.getDeviceStatus).mockResolvedValue(mockStatus);
+      await device.initialFetch();
+
+      vi.mocked(client.getDeviceStatus).mockRejectedValue(new RateLimitError());
+      const onUpdate = vi.fn();
+      device.startPolling(onUpdate);
+
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
+      expect(device.isReachable()).toBe(true);
+
+      // Recovery
+      vi.mocked(client.getDeviceStatus).mockResolvedValue(mockStatus);
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
+      expect(onUpdate).toHaveBeenCalled();
+      expect(device.isReachable()).toBe(true);
+    });
+
+    it('should handle RateLimitError during initialFetch gracefully', async () => {
+      vi.mocked(client.getDeviceStatus).mockRejectedValue(new RateLimitError());
+      await device.initialFetch();
+
+      expect(device.hasData()).toBe(false);
+      expect(device.getPower()).toBe(Power.Off);
+      expect(mockLog.warn).toHaveBeenCalledWith(expect.stringContaining('rate limited'));
+    });
+
+    it('should throw RateLimitError on SET commands during rate limit', async () => {
+      vi.mocked(client.getDeviceStatus).mockResolvedValue(mockStatus);
+      await device.initialFetch();
+
+      vi.mocked(client.setPower).mockRejectedValue(new RateLimitError());
+      await expect(device.setPower(Power.Off)).rejects.toThrow(RateLimitError);
+
+      // State should not have changed (optimistic update only happens after await succeeds)
+      expect(device.getPower()).toBe(Power.On);
     });
   });
 });

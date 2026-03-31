@@ -38,12 +38,18 @@ export class WinixPurifierAccessory {
     private readonly accessory: PlatformAccessory<DeviceContext>,
     readonly override: DeviceOverride | undefined,
     private readonly log: DeviceLogger,
+    deviceCount: number,
   ) {
     const { deviceId, deviceAlias } = accessory.context.device;
 
     const configuredSeconds = config.pollIntervalSeconds ?? DEFAULT_POLL_INTERVAL_SECONDS;
-    const pollIntervalMs = Math.max(configuredSeconds, MIN_POLL_INTERVAL_SECONDS) * 1000;
-    this.device = new Device(deviceId, pollIntervalMs, this.log);
+    const minForDeviceCount = deviceCount * 10;
+    const effectiveSeconds = Math.max(configuredSeconds, MIN_POLL_INTERVAL_SECONDS, minForDeviceCount);
+    if (effectiveSeconds > configuredSeconds) {
+      this.log.info(`Poll interval scaled to ${effectiveSeconds}s for ${deviceCount} device(s) (configured: ${configuredSeconds}s)`);
+    }
+    const pollIntervalMs = effectiveSeconds * 1000;
+    this.device = new Device(deviceId, pollIntervalMs, this.log, this.platform.client);
     this.servicesInUse = new Set<Service>();
 
     const deviceSerial = override?.serialNumber ?? 'WNXAI00000000';
