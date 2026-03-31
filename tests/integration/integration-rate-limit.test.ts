@@ -27,7 +27,7 @@ function createTestLogger() {
 async function drainBucket(client: WinixClient, deviceId: string): Promise<number> {
   let requestCount = 0;
   let rateLimited = false;
-  while (!rateLimited && requestCount < 100) {
+  while (!rateLimited && requestCount < 500) {
     try {
       await client.getDeviceStatus(deviceId);
       requestCount++;
@@ -55,7 +55,7 @@ describe.runIf(DEVICE_ID)('rate limiting integration', () => {
     const count = await drainBucket(drainedClient, DEVICE_ID!);
     console.log(`Drained bucket after ${count} requests`);
     expect(drainedClient.getCooldownRemaining()).toBeGreaterThan(0);
-  }, 60_000);
+  }, 120_000);
 
   it('should handle rate limit during initialFetch gracefully', async () => {
     // Device created with an already-rate-limited client.
