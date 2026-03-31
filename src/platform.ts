@@ -13,7 +13,7 @@ import { NotConfiguredError, UnauthenticatedError, WinixHandler } from './winix'
 import { ENCRYPTION_KEY, PLATFORM_NAME, PLUGIN_NAME } from './settings';
 import { DeviceOverride, WinixPlatformConfig } from './config';
 import { WinixPurifierAccessory } from './accessory';
-import { WinixDevice } from 'winix-api';
+import { WinixClient, WinixDevice } from 'winix-api';
 import { DeviceLogger } from './logger';
 import { assertError } from './errors';
 import { decrypt } from './encryption';
@@ -34,6 +34,7 @@ export class WinixPurifierPlatform implements DynamicPlatformPlugin {
   private readonly accessories: Map<string, PlatformAccessory<DeviceContext>>;
   private readonly handlers: Map<string, WinixPurifierAccessory>;
   private readonly deviceOverrides: Map<string, DeviceOverride>;
+  readonly client: WinixClient;
   private winix: WinixHandler;
 
   constructor(
@@ -46,6 +47,7 @@ export class WinixPurifierPlatform implements DynamicPlatformPlugin {
     this.handlers = new Map<string, WinixPurifierAccessory>();
     this.deviceOverrides = (this.config.deviceOverrides ?? [])
       .reduce((m, o) => m.set(o.deviceId, o), new Map<string, DeviceOverride>());
+    this.client = new WinixClient();
     this.winix = new WinixHandler(api.user.storagePath(), ENCRYPTION_KEY);
 
     this.api.on(APIEvent.DID_FINISH_LAUNCHING, this.onFinishLaunching.bind(this));
@@ -117,13 +119,13 @@ export class WinixPurifierPlatform implements DynamicPlatformPlugin {
 
       if (accessory) {
         accessory.context.device = device;
-        const handler = await this.createNewAccessoryHandler(accessory);
+        const handler = await this.createNewAccessoryHandler(accessory, devices.length);
         this.handlers.set(uuid, handler);
         this.api.updatePlatformAccessories([accessory]);
       } else {
         accessory = new this.api.platformAccessory(device.deviceAlias, uuid, Categories.AIR_PURIFIER);
         accessory.context.device = device;
-        const handler = await this.createNewAccessoryHandler(accessory);
+        const handler = await this.createNewAccessoryHandler(accessory, devices.length);
         this.accessories.set(uuid, accessory);
         this.handlers.set(uuid, handler);
         accessoriesToAdd.push(accessory);
@@ -139,12 +141,12 @@ export class WinixPurifierPlatform implements DynamicPlatformPlugin {
     this.removeOldDevices(discoveredUUIDs);
   }
 
-  private async createNewAccessoryHandler(accessory: PlatformAccessory<DeviceContext>): Promise<WinixPurifierAccessory> {
+  private async createNewAccessoryHandler(accessory: PlatformAccessory<DeviceContext>, deviceCount: number): Promise<WinixPurifierAccessory> {
     // 🫣 suppress warning message about adding characteristics which aren't required / optional, since it isn't accurate
     this.suppressCharacteristicWarnings(accessory);
     const deviceOverride = this.deviceOverrides.get(accessory.context.device.deviceId);
     const log = new DeviceLogger(this.log, accessory.context.device);
-    const handler = new WinixPurifierAccessory(this, this.config, accessory, deviceOverride, log);
+    const handler = new WinixPurifierAccessory(this, this.config, accessory, deviceOverride, log, deviceCount);
     this.unsuppressCharacteristicWarnings(accessory);
 
     await handler.initialize();

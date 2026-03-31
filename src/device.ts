@@ -1,4 +1,4 @@
-import { Airflow, AirQuality, DeviceStatus, Mode, Plasmawave, Power, WinixAPI } from 'winix-api';
+import { Airflow, AirQuality, DeviceStatus, Mode, Plasmawave, Power, RateLimitError, WinixClient } from 'winix-api';
 import { DeviceLogger } from './logger';
 
 export interface DeviceState extends DeviceStatus {
@@ -26,6 +26,7 @@ export class Device {
     private readonly deviceId: string,
     private readonly pollIntervalMs: number,
     private readonly log: DeviceLogger,
+    private readonly client: WinixClient,
   ) {
     this.state = {
       power: Power.Off,
@@ -49,12 +50,16 @@ export class Device {
   async initialFetch(): Promise<void> {
     try {
       this.log.debug('device:initialFetch()');
-      const newState = await WinixAPI.getDeviceStatus(this.deviceId);
+      const newState = await this.client.getDeviceStatus(this.deviceId);
       Object.assign(this.state, newState);
       this.hasReceivedData = true;
       this.consecutiveFailures = 0;
       this.log.debug('device:initialFetch()', JSON.stringify(this.state));
     } catch (e: unknown) {
+      if (e instanceof RateLimitError) {
+        this.log.warn('device:initialFetch() rate limited, using defaults');
+        return;
+      }
       this.log.warn('device:initialFetch() failed, using defaults:', (e as Error).message);
     }
   }
@@ -122,7 +127,7 @@ export class Device {
     }
 
     this.log.debug('device:setPower()', initialPower, value);
-    await WinixAPI.setPower(this.deviceId, value);
+    await this.client.setPower(this.deviceId, value);
     this.state.power = value;
 
     // Side effects observed from device testing
@@ -144,7 +149,7 @@ export class Device {
     }
 
     this.log.debug('device:setMode(%s)', value);
-    await WinixAPI.setMode(this.deviceId, value);
+    await this.client.setMode(this.deviceId, value);
     this.state.mode = value;
 
     // Side effects observed from device testing
@@ -165,7 +170,7 @@ export class Device {
       await new Promise(r => setTimeout(r, COMMAND_DELAY_MS));
     }
 
-    await WinixAPI.setAirflow(this.deviceId, value);
+    await this.client.setAirflow(this.deviceId, value);
     this.state.airflow = value;
 
     // Side effects observed from device testing
@@ -177,7 +182,7 @@ export class Device {
   async setPlasmawave(value: Plasmawave): Promise<void> {
     this.log.debug('device:setPlasmawave()', value);
     await this.ensureOn();
-    await WinixAPI.setPlasmawave(this.deviceId, value);
+    await this.client.setPlasmawave(this.deviceId, value);
     this.state.plasmawave = value;
   }
 
@@ -193,13 +198,18 @@ export class Device {
   private async poll(): Promise<void> {
     try {
       this.log.debug('device:poll()');
-      const newState = await WinixAPI.getDeviceStatus(this.deviceId);
+      const newState = await this.client.getDeviceStatus(this.deviceId);
       Object.assign(this.state, newState);
       this.hasReceivedData = true;
       this.consecutiveFailures = 0;
       this.log.debug('device:poll()', JSON.stringify(this.state));
       this.onUpdate?.();
     } catch (e: unknown) {
+      if (e instanceof RateLimitError) {
+        this.log.warn('device:poll() rate limited, retrying on next interval');
+        this.schedulePoll(this.pollIntervalMs);
+        return;
+      }
       this.consecutiveFailures++;
       const backoffMs = Math.min(
         this.pollIntervalMs * Math.pow(2, this.consecutiveFailures),
