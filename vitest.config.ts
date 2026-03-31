@@ -5,6 +5,7 @@ export default defineConfig({
     env: {
       HOMEBRIDGE_STORAGE_PATH: '/path/to/storage',
     },
+    exclude: [...configDefaults.exclude, '**/integration/**'],
     globals: true,
     environment: 'node',
     coverage: {
