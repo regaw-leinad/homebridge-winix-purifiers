@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { Power, WinixClient, RateLimitError } from 'winix-api';
 import { Device } from '../../src/device';
 
@@ -19,95 +19,114 @@ function createTestLogger() {
       error: (...args: unknown[]) => entries.push({ level: 'error', args }),
     } as any,
     entries,
-    hasLevel: (level: string) => entries.some(e => e.level === level),
     hasMessageContaining: (level: string, text: string) =>
       entries.some(e => e.level === level && e.args.some(a => String(a).includes(text))),
   };
 }
 
-describe.runIf(DEVICE_ID)('rate limiting integration', () => {
-  let client: WinixClient;
-
-  beforeAll(async () => {
-    client = new WinixClient();
-
-    // Drain the rate limit bucket
-    let rateLimited = false;
-    let requestCount = 0;
-    while (!rateLimited && requestCount < 100) {
-      try {
-        await client.getDeviceStatus(DEVICE_ID!);
-        requestCount++;
-      } catch (e) {
-        if (e instanceof RateLimitError) {
-          rateLimited = true;
-        } else {
-          throw e;
-        }
+async function drainBucket(client: WinixClient, deviceId: string): Promise<number> {
+  let requestCount = 0;
+  let rateLimited = false;
+  while (!rateLimited && requestCount < 100) {
+    try {
+      await client.getDeviceStatus(deviceId);
+      requestCount++;
+    } catch (e) {
+      if (e instanceof RateLimitError) {
+        rateLimited = true;
+      } else {
+        throw e;
       }
     }
+  }
+  if (!rateLimited) {
+    throw new Error(`Failed to trigger rate limit after ${requestCount} requests`);
+  }
+  return requestCount;
+}
 
-    console.log(`Drained bucket after ${requestCount} requests`);
-    expect(rateLimited).toBe(true);
-    expect(client.getCooldownRemaining()).toBeGreaterThan(0);
+describe.runIf(DEVICE_ID)('rate limiting integration', () => {
+  // Tests 1 and 2 share a pre-drained client (efficient, no recovery wait needed).
+  // Test 3 uses its own client so it can do initialFetch before draining.
+  let drainedClient: WinixClient;
+
+  beforeAll(async () => {
+    drainedClient = new WinixClient();
+    const count = await drainBucket(drainedClient, DEVICE_ID!);
+    console.log(`Drained bucket after ${count} requests`);
+    expect(drainedClient.getCooldownRemaining()).toBeGreaterThan(0);
   }, 60_000);
 
   it('should handle rate limit during initialFetch gracefully', async () => {
+    // Device created with an already-rate-limited client.
+    // initialFetch should not crash, should use defaults, should log a warning.
     const { log, hasMessageContaining } = createTestLogger();
-    const device = new Device(DEVICE_ID!, 30_000, log, client);
+    const device = new Device(DEVICE_ID!, 30_000, log, drainedClient);
 
     await device.initialFetch();
 
     expect(device.hasData()).toBe(false);
-    expect(device.getPower()).toBe(Power.Off); // default
+    expect(device.getPower()).toBe(Power.Off);
     expect(hasMessageContaining('warn', 'rate limited')).toBe(true);
   }, 15_000);
 
   it('should throw RateLimitError on SET command without changing state', async () => {
+    // Device starts with default state (power=Off). Trying to set power=On
+    // should throw RateLimitError and not update the optimistic state.
     const { log } = createTestLogger();
-    const device = new Device(DEVICE_ID!, 30_000, log, client);
+    const device = new Device(DEVICE_ID!, 30_000, log, drainedClient);
 
-    // Set initial state to On so setPower(Off) actually tries the API
-    await device.initialFetch(); // will fail (rate limited), state stays at defaults
-    // Default power is Off, so try setting to On
     await expect(device.setPower(Power.On)).rejects.toThrow(RateLimitError);
-    expect(device.getPower()).toBe(Power.Off); // unchanged
+    expect(device.getPower()).toBe(Power.Off);
   }, 15_000);
 
   it('should stay reachable during rate limit and recover after cooldown', async () => {
+    // This test uses its own client so we can:
+    // 1. Wait for the IP-level rate limit from beforeAll to clear
+    // 2. Do a successful initialFetch (device becomes reachable)
+    // 3. Drain the bucket again (device enters rate limit)
+    // 4. Verify device stays reachable during cooldown (consecutiveFailures not incremented)
+    // 5. Wait for cooldown to clear
+    // 6. Verify polling recovers and delivers updates
     const { log, hasMessageContaining } = createTestLogger();
+    const client = new WinixClient();
     const device = new Device(DEVICE_ID!, 5_000, log, client);
 
-    // Do a fresh initialFetch on a new client so the device has data
-    const freshClient = new WinixClient();
-    const setupDevice = new Device(DEVICE_ID!, 30_000, log, freshClient);
+    // Step 1: Wait for the IP-level rate limit from beforeAll/earlier tests to clear.
+    // The drainedClient tracks its own cooldown, but the IP-level limit is shared.
+    const remaining = drainedClient.getCooldownRemaining();
+    if (remaining > 0) {
+      console.log(`Waiting ${remaining + 5000}ms for IP-level rate limit to clear...`);
+      await new Promise(r => setTimeout(r, remaining + 5_000));
+    }
 
-    // Wait for any residual cooldown on the fresh client
-    // (fresh client has no cooldown, so this should work)
-    await setupDevice.initialFetch();
+    // Step 2: Successful fetch so device has data and is reachable
+    await device.initialFetch();
+    expect(device.hasData()).toBe(true);
+    expect(device.isReachable()).toBe(true);
 
-    // If setup succeeded, copy that the device "has data" by doing initialFetch
-    // But our test device uses the rate-limited client, so initialFetch will fail
-    // Instead, test reachability through polling after we manually set hasData
-    // via a successful fetch on the rate-limited client after cooldown
+    // Step 2: Drain the bucket on this client
+    const count = await drainBucket(client, DEVICE_ID!);
+    console.log(`Drained bucket after ${count} requests`);
+    expect(client.getCooldownRemaining()).toBeGreaterThan(0);
 
-    // Start polling on the rate-limited client
+    // Step 3: Start polling. Polls will hit RateLimitError but device should
+    // NOT become unreachable (consecutiveFailures should not increment).
     let updateCount = 0;
     device.startPolling(() => updateCount++);
 
-    // During cooldown, polls should get RateLimitError but device should not go unreachable
-    await new Promise(r => setTimeout(r, 10_000));
+    await new Promise(r => setTimeout(r, 12_000));
     expect(hasMessageContaining('warn', 'rate limited')).toBe(true);
+    expect(device.isReachable()).toBe(true);
 
-    // Wait for cooldown to clear (75s from the start of the test, but bucket was
-    // drained in beforeAll, so we need to wait for the remaining cooldown)
+    // Step 4: Wait for cooldown to clear
     const remaining = client.getCooldownRemaining();
     if (remaining > 0) {
       console.log(`Waiting ${remaining}ms for cooldown to clear...`);
       await new Promise(r => setTimeout(r, remaining + 5_000));
     }
 
-    // After cooldown, next poll should succeed
+    // Step 5: After cooldown, next poll should succeed and fire onUpdate
     await new Promise(r => setTimeout(r, 10_000));
     device.stopPolling();
 
@@ -115,8 +134,4 @@ describe.runIf(DEVICE_ID)('rate limiting integration', () => {
     expect(client.getCooldownRemaining()).toBe(0);
     expect(device.isReachable()).toBe(true);
   }, 180_000);
-
-  afterAll(() => {
-    // Allow garbage collection of timers
-  });
 });

@@ -95,11 +95,13 @@ describe.runIf(hasCredentials)('plugin integration', () => {
       let updateCount = 0;
       device.startPolling(() => updateCount++);
 
-      await new Promise(r => setTimeout(r, 7_000));
+      // First poll has random jitter up to pollIntervalMs (5s), then polls every 5s.
+      // Wait 15s to guarantee at least one poll fires regardless of jitter.
+      await new Promise(r => setTimeout(r, 15_000));
       device.stopPolling();
 
       expect(updateCount).toBeGreaterThanOrEqual(1);
-    }, 15_000);
+    }, 25_000);
 
     it('should work with shared WinixClient across two devices', async () => {
       client = new WinixClient();
@@ -114,7 +116,10 @@ describe.runIf(hasCredentials)('plugin integration', () => {
       device1.startPolling(() => updates1++);
       device2.startPolling(() => updates2++);
 
-      await new Promise(r => setTimeout(r, 10_000));
+      // Jitter can be up to pollIntervalMs per device. Worst case:
+      // device1: 5s jitter + 5s interval = 10s, device2: 7s jitter + 7s interval = 14s.
+      // Wait 20s to guarantee both fire at least once.
+      await new Promise(r => setTimeout(r, 20_000));
       device1.stopPolling();
       device2.stopPolling();
 
@@ -124,6 +129,6 @@ describe.runIf(hasCredentials)('plugin integration', () => {
 
       // Clean up for afterEach
       device = device1;
-    }, 20_000);
+    }, 30_000);
   });
 });
