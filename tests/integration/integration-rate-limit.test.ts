@@ -119,19 +119,30 @@ describe.runIf(DEVICE_ID)('rate limiting integration', () => {
     expect(hasMessageContaining('warn', 'rate limited')).toBe(true);
     expect(device.isReachable()).toBe(true);
 
-    // Step 4: Wait for cooldown to clear
-    const remaining = client.getCooldownRemaining();
-    if (remaining > 0) {
-      console.log(`Waiting ${remaining}ms for cooldown to clear...`);
-      await new Promise(r => setTimeout(r, remaining + 5_000));
+    // Step 4: Wait for cooldown to clear, plus extra buffer for the API-side
+    // rate limit window. The client's 60s cooldown means no requests hit the API
+    // during that time, but the API may need its own 60s of silence. Add 15s buffer.
+    const cooldownLeft = client.getCooldownRemaining();
+    if (cooldownLeft > 0) {
+      const waitMs = cooldownLeft + 15_000;
+      console.log(`Waiting ${waitMs}ms for cooldown + API recovery...`);
+      await new Promise(r => setTimeout(r, waitMs));
     }
 
-    // Step 5: After cooldown, next poll should succeed and fire onUpdate
-    await new Promise(r => setTimeout(r, 10_000));
+    // Step 5: After cooldown, polls should eventually succeed.
+    // If the first post-cooldown poll re-triggers cooldown (API not fully recovered),
+    // wait for that second cooldown too.
+    const secondCooldown = client.getCooldownRemaining();
+    if (secondCooldown > 0) {
+      console.log(`Second cooldown triggered, waiting ${secondCooldown + 15_000}ms...`);
+      await new Promise(r => setTimeout(r, secondCooldown + 15_000));
+    }
+
+    await new Promise(r => setTimeout(r, 15_000));
     device.stopPolling();
 
     expect(updateCount).toBeGreaterThanOrEqual(1);
     expect(client.getCooldownRemaining()).toBe(0);
     expect(device.isReachable()).toBe(true);
-  }, 180_000);
+  }, 300_000);
 });
