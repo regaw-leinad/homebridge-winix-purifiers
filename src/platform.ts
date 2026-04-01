@@ -117,7 +117,12 @@ export class WinixPurifierPlatform implements DynamicPlatformPlugin {
       let accessory = this.accessories.get(uuid);
       this.log.debug('Found', accessory ? 'existing' : 'new', 'accessory:', this.logName(device));
 
-      if (accessory) {
+      if (accessory && this.handlers.has(uuid)) {
+        // Existing device on refresh: update metadata only, keep handler + polling loop
+        accessory.context.device = device;
+        this.api.updatePlatformAccessories([accessory]);
+      } else if (accessory) {
+        // First boot with cached accessory: create handler
         accessory.context.device = device;
         const handler = await this.createNewAccessoryHandler(accessory, devices.length);
         this.handlers.set(uuid, handler);
