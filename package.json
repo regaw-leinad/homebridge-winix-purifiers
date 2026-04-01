@@ -1,7 +1,7 @@
 {
   "displayName": "Winix Air Purifiers",
   "name": "homebridge-winix-purifiers",
-  "version": "2.2.2",
+  "version": "2.2.3",
   "description": "Homebridge plugin for Winix air purifiers",
   "license": "Apache-2.0",
   "repository": {
