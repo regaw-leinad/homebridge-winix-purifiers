@@ -73,7 +73,7 @@ describe.runIf(hasCredentials)('plugin integration', () => {
     });
 
     it('should fetch device status on initialFetch', async () => {
-      client = new WinixClient();
+      client = new WinixClient(handler.getIdentityId());
       device = new Device(DEVICE_ID!, 30_000, log, client);
 
       await device.initialFetch();
@@ -88,7 +88,7 @@ describe.runIf(hasCredentials)('plugin integration', () => {
     }, 15_000);
 
     it('should receive updates via polling', async () => {
-      client = new WinixClient();
+      client = new WinixClient(handler.getIdentityId());
       device = new Device(DEVICE_ID!, 5_000, log, client);
       await device.initialFetch();
 
@@ -104,7 +104,7 @@ describe.runIf(hasCredentials)('plugin integration', () => {
     }, 25_000);
 
     it('should work with shared WinixClient across two devices', async () => {
-      client = new WinixClient();
+      client = new WinixClient(handler.getIdentityId());
       const device1 = new Device(DEVICE_ID!, 5_000, log, client);
       const device2 = new Device(DEVICE_ID!, 7_000, log, client);
 

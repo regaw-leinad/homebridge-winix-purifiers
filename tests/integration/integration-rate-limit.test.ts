@@ -1,8 +1,16 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { Power, WinixClient, RateLimitError } from 'winix-api';
 import { Device } from '../../src/device';
+import { WinixHandler } from '../../src/winix';
+import { ENCRYPTION_KEY } from '../../src/settings';
+import { mkdtemp } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 
+const USERNAME = process.env.WINIX_USERNAME;
+const PASSWORD = process.env.WINIX_PASSWORD;
 const DEVICE_ID = process.env.WINIX_DEVICE_ID;
+const canRun = !!(USERNAME && PASSWORD && DEVICE_ID);
 
 interface LogEntry {
   level: string;
@@ -61,13 +69,19 @@ async function drainBucket(client: WinixClient, deviceId: string): Promise<numbe
   return requestCount;
 }
 
-describe.runIf(DEVICE_ID)('rate limiting integration', () => {
+describe.runIf(canRun)('rate limiting integration', () => {
   // Tests 1 and 2 share a pre-drained client (efficient, no recovery wait needed).
   // Test 3 uses its own client so it can do initialFetch before draining.
   let drainedClient: WinixClient;
+  let identityId: string;
 
   beforeAll(async () => {
-    drainedClient = new WinixClient();
+    const storagePath = await mkdtemp(path.join(tmpdir(), 'winix-rate-limit-'));
+    const handler = new WinixHandler(storagePath, ENCRYPTION_KEY);
+    await handler.login(USERNAME!, PASSWORD!);
+    identityId = handler.getIdentityId();
+
+    drainedClient = new WinixClient(identityId);
     const count = await drainBucket(drainedClient, DEVICE_ID!);
     console.log(`Drained bucket after ${count} requests`);
     expect(drainedClient.getCooldownRemaining()).toBeGreaterThan(0);
@@ -105,12 +119,12 @@ describe.runIf(DEVICE_ID)('rate limiting integration', () => {
     // 5. Wait for recovery (poll, don't guess)
     // 6. Verify polling delivered updates
     const { log, hasMessageContaining } = createTestLogger();
-    const client = new WinixClient();
+    const client = new WinixClient(identityId);
     const device = new Device(DEVICE_ID!, 5_000, log, client);
 
     // Step 1: Wait for API to recover from earlier tests.
     // AWS WAF recovery timing is unpredictable, so poll instead of guessing.
-    const probeClient = new WinixClient();
+    const probeClient = new WinixClient(identityId);
     console.log('Waiting for API to recover from earlier tests...');
     await waitForRecovery(probeClient, DEVICE_ID!);
 

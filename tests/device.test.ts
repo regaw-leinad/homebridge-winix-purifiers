@@ -56,7 +56,7 @@ describe('Device', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.clearAllMocks();
-    client = new WinixClient();
+    client = new WinixClient('us-east-1:test-identity-id');
     device = new Device(DEVICE_ID, POLL_INTERVAL_MS, mockLog, client);
   });
 

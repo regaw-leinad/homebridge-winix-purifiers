@@ -93,6 +93,51 @@
     "@smithy/util-utf8" "^4.2.2"
     tslib "^2.6.2"
 
+"@aws-sdk/client-cognito-identity@3.1014.0":
+  version "3.1014.0"
+  resolved "https://registry.yarnpkg.com/@aws-sdk/client-cognito-identity/-/client-cognito-identity-3.1014.0.tgz#1dbc892fdc970bf06d8fc4a9e52cc2d88551b196"
+  integrity sha512-NvNThzNvdKigwy9gNQnipeefydZ1HGU1kReXl5FPMxclzNgYB0IzwmJSW0mXICdd7PWARUblcfz72LeoOyXs0A==
+  dependencies:
+    "@aws-crypto/sha256-browser" "5.2.0"
+    "@aws-crypto/sha256-js" "5.2.0"
+    "@aws-sdk/core" "^3.973.23"
+    "@aws-sdk/credential-provider-node" "^3.972.24"
+    "@aws-sdk/middleware-host-header" "^3.972.8"
+    "@aws-sdk/middleware-logger" "^3.972.8"
+    "@aws-sdk/middleware-recursion-detection" "^3.972.8"
+    "@aws-sdk/middleware-user-agent" "^3.972.24"
+    "@aws-sdk/region-config-resolver" "^3.972.9"
+    "@aws-sdk/types" "^3.973.6"
+    "@aws-sdk/util-endpoints" "^3.996.5"
+    "@aws-sdk/util-user-agent-browser" "^3.972.8"
+    "@aws-sdk/util-user-agent-node" "^3.973.10"
+    "@smithy/config-resolver" "^4.4.13"
+    "@smithy/core" "^3.23.12"
+    "@smithy/fetch-http-handler" "^5.3.15"
+    "@smithy/hash-node" "^4.2.12"
+    "@smithy/invalid-dependency" "^4.2.12"
+    "@smithy/middleware-content-length" "^4.2.12"
+    "@smithy/middleware-endpoint" "^4.4.27"
+    "@smithy/middleware-retry" "^4.4.44"
+    "@smithy/middleware-serde" "^4.2.15"
+    "@smithy/middleware-stack" "^4.2.12"
+    "@smithy/node-config-provider" "^4.3.12"
+    "@smithy/node-http-handler" "^4.5.0"
+    "@smithy/protocol-http" "^5.3.12"
+    "@smithy/smithy-client" "^4.12.7"
+    "@smithy/types" "^4.13.1"
+    "@smithy/url-parser" "^4.2.12"
+    "@smithy/util-base64" "^4.3.2"
+    "@smithy/util-body-length-browser" "^4.2.2"
+    "@smithy/util-body-length-node" "^4.2.3"
+    "@smithy/util-defaults-mode-browser" "^4.3.43"
+    "@smithy/util-defaults-mode-node" "^4.2.47"
+    "@smithy/util-endpoints" "^3.3.3"
+    "@smithy/util-middleware" "^4.2.12"
+    "@smithy/util-retry" "^4.2.12"
+    "@smithy/util-utf8" "^4.2.2"
+    tslib "^2.6.2"
+
 "@aws-sdk/core@^3.973.23":
   version "3.973.23"
   resolved "https://registry.npmjs.org/@aws-sdk/core/-/core-3.973.23.tgz"
@@ -3518,11 +3563,12 @@ why-is-node-running@^2.3.0:
     siginfo "^2.0.0"
     stackback "0.0.2"
 
-winix-api@1.9.0:
-  version "1.9.0"
-  resolved "https://registry.yarnpkg.com/winix-api/-/winix-api-1.9.0.tgz#e923528e7a0a0bfb204963b528688a265584317e"
-  integrity sha512-UTyYboavNdqtpoR2qINGaT220tP3r+lt3RF/3PbLq1nS18vIO1LFVPNPqVEHid1rbUhQbxIpiHfHaUDP9Tgw8Q==
+winix-api@2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/winix-api/-/winix-api-2.0.0.tgz#dce9ce22083a44615ab9430494728d4ffe267186"
+  integrity sha512-3oaV3X89Ul93rQePDiTXdFzJ4j/4vbTenaaltr5kGsppAQuByj/YMUqxpYN0KSN5zNDuRfhola8CUhx0GWK2jg==
   dependencies:
+    "@aws-sdk/client-cognito-identity" "3.1014.0"
     "@aws-sdk/client-cognito-identity-provider" "3.1014.0"
     axios "1.13.6"
     crc "4.3.2"
