@@ -65,7 +65,7 @@
   ],
   "dependencies": {
     "@homebridge/plugin-ui-utils": "1.0.3",
-    "winix-api": "1.9.0"
+    "winix-api": "2.0.0"
   },
   "devDependencies": {
     "@types/node": "20.11.0",

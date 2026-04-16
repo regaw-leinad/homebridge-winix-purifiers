@@ -3,7 +3,7 @@ name: Integration Tests
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 7 * * 0' # Sunday at 7am UTC
+    - cron: '30 6 * * *' # Daily at 6:30am UTC (30 min after winix-api)
 
 jobs:
   integration:
@@ -37,4 +37,6 @@ jobs:
       - name: Run rate limit integration tests
         run: yarn test:integration:rate-limit
         env:
+          WINIX_USERNAME: ${{ secrets.WINIX_USERNAME }}
+          WINIX_PASSWORD: ${{ secrets.WINIX_PASSWORD }}
           WINIX_DEVICE_ID: ${{ secrets.WINIX_DEVICE_ID }}

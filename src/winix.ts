@@ -108,6 +108,13 @@ export class WinixHandler {
     }
   }
 
+  getIdentityId(): string {
+    if (!this.winix) {
+      throw new UnauthenticatedError();
+    }
+    return this.winix.getIdentityId();
+  }
+
   async getDevices(): Promise<WinixDevice[]> {
     if (!this.winix || !this.auth) {
       throw new UnauthenticatedError();

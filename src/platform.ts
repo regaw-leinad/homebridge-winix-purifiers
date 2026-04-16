@@ -34,7 +34,7 @@ export class WinixPurifierPlatform implements DynamicPlatformPlugin {
   private readonly accessories: Map<string, PlatformAccessory<DeviceContext>>;
   private readonly handlers: Map<string, WinixPurifierAccessory>;
   private readonly deviceOverrides: Map<string, DeviceOverride>;
-  readonly client: WinixClient;
+  client!: WinixClient;
   private winix: WinixHandler;
 
   constructor(
@@ -47,7 +47,6 @@ export class WinixPurifierPlatform implements DynamicPlatformPlugin {
     this.handlers = new Map<string, WinixPurifierAccessory>();
     this.deviceOverrides = (this.config.deviceOverrides ?? [])
       .reduce((m, o) => m.set(o.deviceId, o), new Map<string, DeviceOverride>());
-    this.client = new WinixClient();
     this.winix = new WinixHandler(api.user.storagePath(), ENCRYPTION_KEY);
 
     this.api.on(APIEvent.DID_FINISH_LAUNCHING, this.onFinishLaunching.bind(this));
@@ -80,6 +79,8 @@ export class WinixPurifierPlatform implements DynamicPlatformPlugin {
       this.log.error('error getting devices:', e.message);
       return;
     }
+
+    this.client = new WinixClient(this.winix.getIdentityId());
 
     await this.discoverDevices();
 

@@ -133,6 +133,20 @@ describe('WinixHandler', () => {
     });
   });
 
+  describe('getIdentityId', () => {
+    it('should throw UnauthenticatedError if winix is not authenticated', () => {
+      expect(() => handler.getIdentityId()).toThrow(UnauthenticatedError);
+    });
+
+    it('should return the identityId from WinixAccount when authenticated', () => {
+      handler['winix'] = {
+        getIdentityId: vi.fn().mockReturnValue('us-east-1:abc-123'),
+      } as unknown as WinixAccount;
+
+      expect(handler.getIdentityId()).toBe('us-east-1:abc-123');
+    });
+  });
+
   describe('getDevices', () => {
     it('should throw UnauthenticatedError if winix is not authenticated', async () => {
       await expect(handler.getDevices()).rejects.toThrow(UnauthenticatedError);
