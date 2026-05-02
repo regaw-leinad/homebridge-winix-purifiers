@@ -1,4 +1,4 @@
-import { Airflow, AirQuality, DeviceStatus, Mode, Plasmawave, Power, RateLimitError, WinixClient } from 'winix-api';
+import { Airflow, AirQuality, DeviceStatus, Mode, NoDataError, Plasmawave, Power, RateLimitError, WinixClient } from 'winix-api';
 import { DeviceLogger } from './logger';
 
 export interface DeviceState extends DeviceStatus {
@@ -210,12 +210,23 @@ export class Device {
         this.schedulePoll(this.pollIntervalMs);
         return;
       }
+      // Winix occasionally returns "no data" for a healthy device. Treat as
+      // transient: keep last-known state and don't count toward unreachable.
+      if (e instanceof NoDataError) {
+        this.log.debug('device:poll() got NoDataError, retaining last-known state');
+        this.schedulePoll(this.pollIntervalMs);
+        return;
+      }
       this.consecutiveFailures++;
       const backoffMs = Math.min(
         this.pollIntervalMs * Math.pow(2, this.consecutiveFailures),
         MAX_BACKOFF_MS,
       );
-      this.log.error(`device:poll() error: ${(e as Error).message} (retry in ${Math.round(backoffMs / 1000)}s)`);
+      const err = e as Error;
+      this.log.error(
+        `device:poll() error: ${err.constructor?.name ?? 'Error'}: ${err.message} ` +
+        `(retry in ${Math.round(backoffMs / 1000)}s)`,
+      );
       this.schedulePoll(backoffMs);
       return;
     }

@@ -1,4 +1,11 @@
-import { RefreshTokenExpiredError, WinixAccount, WinixAuth, WinixAuthResponse, WinixDevice } from 'winix-api';
+import {
+  MobileSessionInvalidError,
+  RefreshTokenExpiredError,
+  WinixAccount,
+  WinixAuth,
+  WinixAuthResponse,
+  WinixDevice,
+} from 'winix-api';
 import { decrypt, DecryptionFailedError, encrypt } from './encryption';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { WinixPluginAuth } from './config';
@@ -6,6 +13,7 @@ import path from 'node:path';
 
 const TOKEN_DIRECTORY_NAME = 'winix-purifiers';
 const TOKEN_FILE_NAME = 'token.json';
+const MIN_RELOGIN_INTERVAL_MS = 5 * 60 * 1000;
 
 export class NotConfiguredError extends Error {
   constructor() {
@@ -23,6 +31,7 @@ export class WinixHandler {
   private readonly refreshTokenPath: string;
   private auth?: WinixPluginAuth;
   private winix?: WinixAccount;
+  private lastReloginAt = 0;
 
   constructor(storagePath: string, private readonly encryptionKey: string) {
     this.refreshTokenPath = path.join(storagePath, TOKEN_DIRECTORY_NAME, TOKEN_FILE_NAME);
@@ -125,11 +134,22 @@ export class WinixHandler {
     try {
       devices = await this.winix.getDevices();
     } catch (e: unknown) {
-      if (!(e instanceof RefreshTokenExpiredError)) {
+      if (e instanceof RefreshTokenExpiredError) {
+        await this.login(this.auth.username, this.auth.password);
+        return await this.winix.getDevices();
+      }
+
+      if (!(e instanceof MobileSessionInvalidError)) {
         throw e;
       }
 
-      // if we get a refresh token expiry, we need to re-login and get devices again
+      // Mobile session invalidated (MULTI LOGIN / "user is not valid"). Re-login
+      // is throttled to prevent ping-pong with another active session.
+      if (Date.now() - this.lastReloginAt < MIN_RELOGIN_INTERVAL_MS) {
+        throw e;
+      }
+
+      this.lastReloginAt = Date.now();
       await this.login(this.auth.username, this.auth.password);
       return await this.winix.getDevices();
     }

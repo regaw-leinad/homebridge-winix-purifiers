@@ -46,6 +46,7 @@
     "test": "vitest run",
     "test:integration": "vitest run --config vitest.integration.config.ts tests/integration/integration.test.ts --reporter=verbose",
     "test:integration:rate-limit": "vitest run --config vitest.integration.config.ts tests/integration/integration-rate-limit.test.ts --reporter=verbose",
+    "test:integration:session-recovery": "node --env-file-if-exists=.env ./node_modules/vitest/vitest.mjs run --config vitest.integration.config.ts tests/integration/integration-session-recovery.test.ts --reporter=verbose",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "validate": "yarn lint && yarn build && yarn test",
@@ -65,7 +66,7 @@
   ],
   "dependencies": {
     "@homebridge/plugin-ui-utils": "1.0.3",
-    "winix-api": "2.0.0"
+    "winix-api": "2.0.1"
   },
   "devDependencies": {
     "@types/node": "20.11.0",

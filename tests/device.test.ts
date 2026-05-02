@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { Airflow, AirQuality, Mode, Plasmawave, Power, WinixClient, RateLimitError } from 'winix-api';
+import { Airflow, AirQuality, Mode, NoDataError, Plasmawave, Power, WinixClient, RateLimitError } from 'winix-api';
 import { Device } from '../src/device';
 
 vi.mock('winix-api', async () => {
@@ -18,6 +18,13 @@ vi.mock('winix-api', async () => {
     }
   }
 
+  class NoDataError extends Error {
+    constructor() {
+      super('no data (invalid or unregistered device?)');
+      this.name = 'NoDataError';
+    }
+  }
+
   const WinixClient = vi.fn().mockImplementation(() => ({
     getDeviceStatus: vi.fn(),
     setPower: vi.fn(),
@@ -26,7 +33,7 @@ vi.mock('winix-api', async () => {
     setPlasmawave: vi.fn(),
   }));
 
-  return { ...enums, WinixClient, RateLimitError };
+  return { ...enums, WinixClient, RateLimitError, NoDataError };
 });
 
 const mockLog = {
@@ -584,6 +591,43 @@ describe('Device', () => {
 
       // State should not have changed (optimistic update only happens after await succeeds)
       expect(device.getPower()).toBe(Power.On);
+    });
+  });
+
+  describe('NoDataError handling', () => {
+    it('should not increment consecutiveFailures on NoDataError during poll', async () => {
+      vi.mocked(client.getDeviceStatus).mockResolvedValue(mockStatus);
+      await device.initialFetch();
+      expect(device.isReachable()).toBe(true);
+
+      vi.mocked(client.getDeviceStatus).mockRejectedValue(new NoDataError());
+      device.startPolling(vi.fn());
+
+      // Many consecutive NoDataErrors should not flip the device to unreachable
+      for (let i = 0; i < 5; i++) {
+        await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
+      }
+
+      expect(device.isReachable()).toBe(true);
+    });
+
+    it('should retain last-known state across NoDataError polls', async () => {
+      vi.mocked(client.getDeviceStatus).mockResolvedValue({
+        ...mockStatus,
+        power: Power.On,
+        airflow: Airflow.High,
+      });
+      await device.initialFetch();
+      expect(device.getPower()).toBe(Power.On);
+      expect(device.getAirflow()).toBe(Airflow.High);
+
+      vi.mocked(client.getDeviceStatus).mockRejectedValue(new NoDataError());
+      device.startPolling(vi.fn());
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
+
+      // Last-known state retained
+      expect(device.getPower()).toBe(Power.On);
+      expect(device.getAirflow()).toBe(Airflow.High);
     });
   });
 });
