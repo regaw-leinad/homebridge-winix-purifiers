@@ -1,4 +1,11 @@
-import { RefreshTokenExpiredError, WinixAccount, WinixAuth, WinixAuthResponse, WinixDevice } from 'winix-api';
+import {
+  MobileSessionInvalidError,
+  RefreshTokenExpiredError,
+  WinixAccount,
+  WinixAuth,
+  WinixAuthResponse,
+  WinixDevice,
+} from 'winix-api';
 import { NotConfiguredError, UnauthenticatedError, WinixHandler } from '../src/winix';
 import { afterEach, beforeEach, describe, expect, it, Mock, vi } from 'vitest';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
@@ -186,6 +193,39 @@ describe('WinixHandler', () => {
 
       expect(handler.login).toHaveBeenCalledWith(mockAuth.username, mockAuth.password);
       expect(devices).toEqual(mockDevices);
+    });
+
+    it('should handle MobileSessionInvalidError and re-login', async () => {
+      handler['auth'] = mockAuth;
+      const sessionErr = new MobileSessionInvalidError('400', 'The user is not valid.', 400, 'https://example');
+      handler['winix'] = {
+        getDevices: vi.fn().mockRejectedValueOnce(sessionErr).mockResolvedValue(mockDevices),
+      } as unknown as WinixAccount;
+
+      vi.spyOn(handler, 'login').mockResolvedValue(mockAuth);
+
+      const devices = await handler.getDevices();
+
+      expect(handler.login).toHaveBeenCalledWith(mockAuth.username, mockAuth.password);
+      expect(devices).toEqual(mockDevices);
+    });
+
+    it('should throttle MobileSessionInvalidError re-logins to one per 5 minutes', async () => {
+      handler['auth'] = mockAuth;
+      const sessionErr = new MobileSessionInvalidError('400', 'The user is not valid.', 400, 'https://example');
+      handler['winix'] = {
+        getDevices: vi.fn().mockRejectedValue(sessionErr),
+      } as unknown as WinixAccount;
+
+      vi.spyOn(handler, 'login').mockResolvedValue(mockAuth);
+
+      // First call: re-login attempted, then second getDevices throws and bubbles
+      await expect(handler.getDevices()).rejects.toBeInstanceOf(MobileSessionInvalidError);
+      expect(handler.login).toHaveBeenCalledTimes(1);
+
+      // Second call right after: throttled, no additional login attempt
+      await expect(handler.getDevices()).rejects.toBeInstanceOf(MobileSessionInvalidError);
+      expect(handler.login).toHaveBeenCalledTimes(1);
     });
   });
 
