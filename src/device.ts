@@ -1,4 +1,7 @@
-import { Airflow, AirQuality, DeviceStatus, Mode, NoDataError, Plasmawave, Power, RateLimitError, WinixClient } from 'winix-api';
+import {
+  Airflow, AirQuality, DeviceStatus, Mode, NoDataError, Plasmawave, Power,
+  RateLimitError, UpstreamUnavailableError, WinixClient,
+} from 'winix-api';
 import { DeviceLogger } from './logger';
 
 export interface DeviceState extends DeviceStatus {
@@ -13,6 +16,9 @@ export interface DeviceState extends DeviceStatus {
 const MAX_BACKOFF_MS = 5 * 60 * 1000;
 const COMMAND_DELAY_MS = 1500;
 const UNREACHABLE_THRESHOLD = 3;
+// 90s clears WinixClient's internal 60s rate-limit cooldown plus a small buffer,
+// so the first poll after a rate-limited initialFetch actually has a chance to succeed.
+const FAILED_FETCH_RETRY_MS = 90 * 1000;
 
 export class Device {
 
@@ -56,8 +62,8 @@ export class Device {
       this.consecutiveFailures = 0;
       this.log.debug('device:initialFetch()', JSON.stringify(this.state));
     } catch (e: unknown) {
-      if (e instanceof RateLimitError) {
-        this.log.warn('device:initialFetch() rate limited, using defaults');
+      if (e instanceof RateLimitError || e instanceof UpstreamUnavailableError) {
+        this.log.warn(`device:initialFetch() ${e.constructor.name}, using defaults (will retry soon)`);
         return;
       }
       this.log.warn('device:initialFetch() failed, using defaults:', (e as Error).message);
@@ -66,10 +72,14 @@ export class Device {
 
   startPolling(onUpdate: () => void): void {
     this.onUpdate = onUpdate;
-    // Stagger the first poll with a random delay to avoid all devices
-    // hitting the API at the same time
-    const jitter = Math.floor(Math.random() * this.pollIntervalMs);
-    this.schedulePoll(jitter);
+    // If initialFetch failed (rate limited, upstream unavailable, etc.), the device
+    // is unreachable in HomeKit until the first successful poll. Skip the full-interval
+    // jitter and retry soon to close that window. Otherwise stagger the first poll
+    // with a random delay to avoid all devices hitting the API at the same time.
+    const delay = this.hasReceivedData
+      ? Math.floor(Math.random() * this.pollIntervalMs)
+      : Math.min(FAILED_FETCH_RETRY_MS, this.pollIntervalMs);
+    this.schedulePoll(delay);
   }
 
   resetPollTimer(delayMs = 3000): void {
@@ -210,10 +220,10 @@ export class Device {
         this.schedulePoll(this.pollIntervalMs);
         return;
       }
-      // Winix occasionally returns "no data" for a healthy device. Treat as
-      // transient: keep last-known state and don't count toward unreachable.
-      if (e instanceof NoDataError) {
-        this.log.debug('device:poll() got NoDataError, retaining last-known state');
+      // Transient upstream conditions (Winix "no data", 5xx, DNS/connect failures,
+      // malformed bodies). Keep last-known state and don't count toward unreachable.
+      if (e instanceof NoDataError || e instanceof UpstreamUnavailableError) {
+        this.log.debug(`device:poll() ${e.constructor.name}, retaining last-known state`);
         this.schedulePoll(this.pollIntervalMs);
         return;
       }

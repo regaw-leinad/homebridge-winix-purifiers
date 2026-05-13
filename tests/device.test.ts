@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { Airflow, AirQuality, Mode, NoDataError, Plasmawave, Power, WinixClient, RateLimitError } from 'winix-api';
+import {
+  Airflow, AirQuality, Mode, NoDataError, Plasmawave, Power,
+  RateLimitError, UpstreamUnavailableError, WinixClient,
+} from 'winix-api';
 import { Device } from '../src/device';
 
 vi.mock('winix-api', async () => {
@@ -25,6 +28,13 @@ vi.mock('winix-api', async () => {
     }
   }
 
+  class UpstreamUnavailableError extends Error {
+    constructor(public readonly cause: string) {
+      super(`Winix backend unavailable: ${cause}`);
+      this.name = 'UpstreamUnavailableError';
+    }
+  }
+
   const WinixClient = vi.fn().mockImplementation(() => ({
     getDeviceStatus: vi.fn(),
     setPower: vi.fn(),
@@ -33,7 +43,7 @@ vi.mock('winix-api', async () => {
     setPlasmawave: vi.fn(),
   }));
 
-  return { ...enums, WinixClient, RateLimitError, NoDataError };
+  return { ...enums, WinixClient, RateLimitError, NoDataError, UpstreamUnavailableError };
 });
 
 const mockLog = {
@@ -579,7 +589,8 @@ describe('Device', () => {
 
       expect(device.hasData()).toBe(false);
       expect(device.getPower()).toBe(Power.Off);
-      expect(mockLog.warn).toHaveBeenCalledWith(expect.stringContaining('rate limited'));
+      // Regex tolerates vitest's mock-class name suffix (e.g. RateLimitError2)
+      expect(mockLog.warn).toHaveBeenCalledWith(expect.stringMatching(/RateLimitError\d*, using defaults/));
     });
 
     it('should throw RateLimitError on SET commands during rate limit', async () => {
@@ -628,6 +639,108 @@ describe('Device', () => {
       // Last-known state retained
       expect(device.getPower()).toBe(Power.On);
       expect(device.getAirflow()).toBe(Airflow.High);
+    });
+  });
+
+  describe('UpstreamUnavailableError handling', () => {
+    it('should not increment consecutiveFailures on UpstreamUnavailableError during poll', async () => {
+      vi.mocked(client.getDeviceStatus).mockResolvedValue(mockStatus);
+      await device.initialFetch();
+      expect(device.isReachable()).toBe(true);
+
+      vi.mocked(client.getDeviceStatus).mockRejectedValue(new UpstreamUnavailableError('HTTP 504'));
+      device.startPolling(vi.fn());
+
+      for (let i = 0; i < 5; i++) {
+        await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
+      }
+
+      expect(device.isReachable()).toBe(true);
+    });
+
+    it('should retain last-known state across UpstreamUnavailableError polls', async () => {
+      vi.mocked(client.getDeviceStatus).mockResolvedValue({
+        ...mockStatus,
+        power: Power.On,
+        airflow: Airflow.High,
+      });
+      await device.initialFetch();
+
+      vi.mocked(client.getDeviceStatus).mockRejectedValue(new UpstreamUnavailableError('EAI_AGAIN'));
+      device.startPolling(vi.fn());
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
+
+      expect(device.getPower()).toBe(Power.On);
+      expect(device.getAirflow()).toBe(Airflow.High);
+    });
+
+    it('should handle UpstreamUnavailableError during initialFetch gracefully', async () => {
+      vi.mocked(client.getDeviceStatus).mockRejectedValue(new UpstreamUnavailableError('HTTP 504'));
+      await device.initialFetch();
+
+      expect(device.hasData()).toBe(false);
+      expect(mockLog.warn).toHaveBeenCalledWith(expect.stringMatching(/UpstreamUnavailableError\d*, using defaults/));
+    });
+  });
+
+  describe('startPolling first-poll timing', () => {
+    // Use a longer poll interval than the 90s failed-fetch retry so the two branches
+    // are observably different. The default POLL_INTERVAL_MS (30s) is shorter than
+    // the retry window and would mask the behavior.
+    const LONG_POLL_MS = 5 * 60 * 1000;
+    let longDevice: Device;
+
+    beforeEach(() => {
+      longDevice = new Device(DEVICE_ID, LONG_POLL_MS, mockLog, client);
+    });
+
+    afterEach(() => {
+      longDevice.stopPolling();
+    });
+
+    it('uses full-interval jitter when initialFetch succeeded', async () => {
+      // Pin jitter to the high end so we can assert it does NOT fire early
+      vi.spyOn(Math, 'random').mockReturnValue(0.99);
+
+      vi.mocked(client.getDeviceStatus).mockResolvedValue(mockStatus);
+      await longDevice.initialFetch();
+      expect(longDevice.hasData()).toBe(true);
+
+      vi.mocked(client.getDeviceStatus).mockClear();
+      longDevice.startPolling(vi.fn());
+
+      // 90s in: poll should NOT have fired yet (jitter is ~297s)
+      await vi.advanceTimersByTimeAsync(90_000);
+      expect(client.getDeviceStatus).not.toHaveBeenCalled();
+    });
+
+    it('retries quickly after a rate-limited initialFetch (within 90s, not full interval)', async () => {
+      vi.mocked(client.getDeviceStatus).mockRejectedValue(new RateLimitError());
+      await longDevice.initialFetch();
+      expect(longDevice.hasData()).toBe(false);
+
+      vi.mocked(client.getDeviceStatus).mockClear();
+      vi.mocked(client.getDeviceStatus).mockResolvedValue(mockStatus);
+      longDevice.startPolling(vi.fn());
+
+      // Should fire within ~90s, well before the 5min interval jitter would have ended
+      await vi.advanceTimersByTimeAsync(90_000);
+      expect(client.getDeviceStatus).toHaveBeenCalledTimes(1);
+      expect(longDevice.hasData()).toBe(true);
+    });
+
+    it('retries quickly after UpstreamUnavailableError during initialFetch', async () => {
+      vi.mocked(client.getDeviceStatus).mockRejectedValue(new UpstreamUnavailableError('HTTP 504'));
+      await longDevice.initialFetch();
+      expect(longDevice.hasData()).toBe(false);
+
+      vi.mocked(client.getDeviceStatus).mockClear();
+      vi.mocked(client.getDeviceStatus).mockResolvedValue(mockStatus);
+      longDevice.startPolling(vi.fn());
+
+      await vi.advanceTimersByTimeAsync(90_000);
+      expect(client.getDeviceStatus).toHaveBeenCalledTimes(1);
+      expect(longDevice.hasData()).toBe(true);
     });
   });
 });

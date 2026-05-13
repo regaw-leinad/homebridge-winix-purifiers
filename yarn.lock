@@ -3563,10 +3563,10 @@ why-is-node-running@^2.3.0:
     siginfo "^2.0.0"
     stackback "0.0.2"
 
-winix-api@2.0.1:
-  version "2.0.1"
-  resolved "https://registry.yarnpkg.com/winix-api/-/winix-api-2.0.1.tgz#2cf8573c07adf4b2c448ddec28717f63a555afed"
-  integrity sha512-bcSY5HgLCxpvEa/z6syUejDOfwSMj1nKhUt+qaa77yVURrh+lUuXUS4UK/uewuWrWtQX2y0LRxNpBNojvyS6HA==
+winix-api@2.0.2:
+  version "2.0.2"
+  resolved "https://registry.yarnpkg.com/winix-api/-/winix-api-2.0.2.tgz#c6c0912ab2351ae63288e5136f90ce7be4d621e1"
+  integrity sha512-3NN3ir7qnCoa3UTPyKC1BUlXl7N01Q/RBAucn1MFljjNSc+5iSSzp25xfHPNrNhg3bFY/H6vaiBog/EHU+9yfg==
   dependencies:
     "@aws-sdk/client-cognito-identity" "3.1014.0"
     "@aws-sdk/client-cognito-identity-provider" "3.1014.0"
