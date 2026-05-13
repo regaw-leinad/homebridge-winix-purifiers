@@ -7,6 +7,7 @@ import {
   Service,
   WithUUID,
 } from 'homebridge';
+import { RateLimitError, UpstreamUnavailableError } from 'winix-api';
 import { WinixPurifierPlatform } from './platform';
 import { DeviceLogger } from './logger';
 import { assertError } from './errors';
@@ -83,7 +84,14 @@ export class CharacteristicWrapper {
       return await fn();
     } catch (e) {
       assertError(e);
-      this.log.error('error calling Winix API:', e.message);
+      // Known transient upstream conditions (rate limit, 5xx, DNS, malformed body)
+      // still fail the HAP call so HomeKit knows the action didn't land, but log at
+      // warn without the implication of a plugin bug.
+      if (e instanceof RateLimitError || e instanceof UpstreamUnavailableError) {
+        this.log.warn(`Winix API transient: ${e.constructor.name}: ${e.message}`);
+      } else {
+        this.log.error('error calling Winix API:', e.message);
+      }
       throw new this.platform.HapStatusError(HAPStatus.SERVICE_COMMUNICATION_FAILURE);
     }
   }
