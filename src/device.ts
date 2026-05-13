@@ -16,6 +16,8 @@ export interface DeviceState extends DeviceStatus {
 const MAX_BACKOFF_MS = 5 * 60 * 1000;
 const COMMAND_DELAY_MS = 1500;
 const UNREACHABLE_THRESHOLD = 3;
+// 90s clears WinixClient's internal 60s rate-limit cooldown plus a small buffer,
+// so the first poll after a rate-limited initialFetch actually has a chance to succeed.
 const FAILED_FETCH_RETRY_MS = 90 * 1000;
 
 export class Device {

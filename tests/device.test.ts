@@ -589,7 +589,8 @@ describe('Device', () => {
 
       expect(device.hasData()).toBe(false);
       expect(device.getPower()).toBe(Power.Off);
-      expect(mockLog.warn).toHaveBeenCalledWith(expect.stringContaining('RateLimitError'));
+      // Regex tolerates vitest's mock-class name suffix (e.g. RateLimitError2)
+      expect(mockLog.warn).toHaveBeenCalledWith(expect.stringMatching(/RateLimitError\d*, using defaults/));
     });
 
     it('should throw RateLimitError on SET commands during rate limit', async () => {
@@ -678,7 +679,7 @@ describe('Device', () => {
       await device.initialFetch();
 
       expect(device.hasData()).toBe(false);
-      expect(mockLog.warn).toHaveBeenCalledWith(expect.stringContaining('UpstreamUnavailableError'));
+      expect(mockLog.warn).toHaveBeenCalledWith(expect.stringMatching(/UpstreamUnavailableError\d*, using defaults/));
     });
   });
 
