@@ -97,7 +97,7 @@ describe.runIf(canRun)('rate limiting integration', () => {
 
     expect(device.hasData()).toBe(false);
     expect(device.getPower()).toBe(Power.Off);
-    expect(hasMessageContaining('warn', 'rate limited')).toBe(true);
+    expect(hasMessageContaining('warn', 'RateLimitError')).toBe(true);
   }, 15_000);
 
   it('should throw RateLimitError on SET command without changing state', async () => {
