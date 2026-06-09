@@ -128,8 +128,18 @@ describe.runIf(canRun)('rate limiting integration', () => {
     console.log('Waiting for API to recover from earlier tests...');
     await waitForRecovery(probeClient, DEVICE_ID!);
 
-    // Step 2: Successful fetch so device has data and is reachable
-    await device.initialFetch();
+    // Step 2: Fetch until the device has data and is reachable.
+    // initialFetch() intentionally swallows a RateLimitError and leaves the
+    // device without data (see Device.initialFetch). The probe above confirmed
+    // recovery, but WAF can re-throttle between the probe and this fetch, so
+    // poll instead of assuming a single fetch succeeds.
+    const fetchDeadline = Date.now() + 60_000;
+    while (!device.hasData() && Date.now() < fetchDeadline) {
+      await device.initialFetch();
+      if (!device.hasData()) {
+        await new Promise(r => setTimeout(r, 5_000));
+      }
+    }
     expect(device.hasData()).toBe(true);
     expect(device.isReachable()).toBe(true);
 
