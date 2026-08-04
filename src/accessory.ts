@@ -5,6 +5,7 @@ import { DeviceOverride, WinixPlatformConfig } from './config';
 import { CharacteristicManager } from './characteristic';
 import { DeviceLogger } from './logger';
 import { Device } from './device';
+import { debounce, inBackground } from './debounce';
 
 /**
  * The maximum filter life in hours.
@@ -75,9 +76,15 @@ export class WinixPurifierAccessory {
     characteristics.get(this.purifier, this.Characteristic.TargetAirPurifierState)
       .onGet(this.getTargetState.bind(this))
       .onSet(this.setTargetState.bind(this));
+    // The airflow write can outlast HAP's 3s warning and 10s timeout when it has to
+    // switch mode first, so this handler returns without waiting. Failures are logged
+    // and the fast-forwarded poll resyncs HomeKit to the device's real state.
     characteristics.get(this.purifier, this.Characteristic.RotationSpeed)
       .onGet(this.getRotationSpeed.bind(this))
-      .onSet(this.debounce(this.setRotationSpeed.bind(this), 500));
+      .onSet(inBackground(
+        debounce(this.setRotationSpeed.bind(this), 500),
+        e => this.onBackgroundSetError('rotation speed', e),
+      ));
     characteristics.get(this.purifier, this.Characteristic.FilterLifeLevel)
       .onGet(this.getFilterLifeLevel.bind(this));
     characteristics.get(this.purifier, this.Characteristic.FilterChangeIndication)
@@ -229,6 +236,16 @@ export class WinixPurifierAccessory {
     const airflow = this.device.getAirflow();
     this.log.debug('accessory:getRotationSpeed()', airflow);
     return this.toRotationSpeed(airflow);
+  }
+
+  /**
+   * Handle a set that ran in the background, past the point where its error could be
+   * returned to HomeKit. Resync so the UI falls back to the device's real state
+   * instead of showing a value that never landed.
+   */
+  onBackgroundSetError(what: string, e: unknown): void {
+    this.log.error(`error setting ${what}:`, e instanceof Error ? e.message : String(e));
+    this.device.resetPollTimer();
   }
 
   async setRotationSpeed(state: CharacteristicValue): Promise<void> {
@@ -496,13 +513,4 @@ export class WinixPurifierAccessory {
     return Math.max(ambientLight, MIN_AMBIENT_LIGHT);
   }
 
-  private debounce(func: (arg: CharacteristicValue) => Promise<void>, delay: number): (arg: CharacteristicValue) => Promise<void> {
-    let timeoutId: NodeJS.Timeout | null = null;
-    return async (arg: CharacteristicValue) => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-      timeoutId = setTimeout(async () => await func(arg), delay);
-    };
-  }
 }
